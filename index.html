@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c8102e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Imposter">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Hvem er Imposteren?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;500;700&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+
+/* Layout: én kolonne, telefon-først. Ét kort ad gangen, som et kort der sendes rundt om bordet. */
+:root{
+  --bg:#f3f1ee; --surface:#ffffff; --ink:#1d1a24; --muted:#6c6573; --line:#e2ddd8;
+  --red:#c8102e; --red-ink:#ffffff; --red-soft:#fbe4e7; --spy:#2b2540;
+  --display:"Bricolage Grotesque",ui-rounded,"Segoe UI",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#16131d; --surface:#211d2b; --ink:#f2eef6; --muted:#a59fb0; --line:#332d40;
+  --red:#ef3b52; --red-ink:#ffffff; --red-soft:#3a1d27; --spy:#0d0b12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16131d; --surface:#211d2b; --ink:#f2eef6; --muted:#a59fb0; --line:#332d40;
+  --red:#ef3b52; --red-ink:#ffffff; --red-soft:#3a1d27; --spy:#0d0b12; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:460px;margin:0 auto;padding-block:20px 40px;display:flex;flex-direction:column;gap:20px;min-height:100%;box-sizing:border-box}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.05}
+.brand{display:flex;align-items:center;gap:10px}
+.flag{width:34px;height:24px;border-radius:4px;background:
+  linear-gradient(var(--red-ink),var(--red-ink)) 11px 0/5px 100% no-repeat,
+  linear-gradient(var(--red-ink),var(--red-ink)) 0 10px/100% 4px no-repeat,var(--red);flex:none}
+.brand h1{font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
+.brand h1 span{color:var(--red)}
+.label{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.section{display:flex;flex-direction:column;gap:10px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+
+.players{display:flex;flex-direction:column;gap:8px}
+.player{display:flex;gap:8px;align-items:center}
+.player .num{width:24px;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700;text-align:right;flex:none}
+input[type=text]{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+input[type=text]:focus{outline:2px solid var(--red);outline-offset:1px}
+.icon-btn{width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer}
+.icon-btn:hover{color:var(--red);border-color:var(--red)}
+
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stepper .ctrl{display:flex;align-items:center;gap:10px}
+.stepper output{font-family:var(--display);font-weight:800;font-size:1.4rem;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
+.row-text{display:flex;flex-direction:column;min-width:0}
+.row-text small{color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-weight:500;font-size:.9rem;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.qa{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.qa.on{background:var(--red-soft);border-color:var(--red)}
+.qa-name{display:flex;align-items:center;gap:8px;padding:7px 4px 7px 12px;cursor:pointer;font-weight:500;font-size:.95rem}
+.qa-name input{width:18px;height:18px;margin:0;accent-color:var(--red);cursor:pointer}
+.qa-x{border:0;background:transparent;color:var(--muted);font-size:1.05rem;padding:6px 12px 6px 6px;cursor:pointer}
+.qa-x:hover{color:var(--red)}
+.qa-x:focus-visible,.qa-name input:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.hint-text{color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:var(--red-ink)}
+
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer}
+.switch{appearance:none;width:48px;height:28px;border-radius:999px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .2s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.switch:checked{background:var(--red)}
+.switch:checked::after{transform:translateX(20px)}
+.switch:focus-visible,.chip:focus-visible,.btn:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+.btn{font:inherit;font-weight:700;font-size:1.05rem;border:0;border-radius:14px;padding:16px 20px;cursor:pointer;width:100%}
+.btn.primary{background:var(--red);color:var(--red-ink)}
+.btn.primary:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.small{width:auto;padding:10px 14px;font-size:.9rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.error{color:var(--red);font-weight:500;font-size:.9rem;margin:0}
+
+/* Spilskærme */
+.stage{flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;text-align:center}
+.progress{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
+.progress i{width:18px;height:6px;border-radius:3px;background:var(--line)}
+.progress i.done{background:var(--red)}
+.handoff .big{font-size:clamp(2.4rem,11vw,3.4rem);font-weight:800;letter-spacing:-.02em;word-break:break-word}
+.card{position:relative;border-radius:22px;min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px 20px;border:0;font:inherit;color:inherit;width:100%;cursor:pointer;overflow:hidden}
+.card.cover{background:var(--surface);border:2px dashed var(--line)}
+.card.cover .eye{width:64px;height:64px;border-radius:50%;background:var(--red-soft);display:grid;place-items:center}
+.card.word{background:var(--red);color:var(--red-ink);cursor:default}
+.card.spy{background:var(--spy);color:#f2eef6;cursor:default}
+.card .kicker{font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.card .secret{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,10vw,3rem);line-height:1.05;word-break:break-word}
+.card .note{font-size:.95rem;opacity:.9;max-width:28ch}
+.card.spy .secret{color:#ff5a6e}
+@keyframes flip{from{transform:rotateX(70deg);opacity:0}to{transform:none;opacity:1}}
+.card.word,.card.spy{animation:flip .35s ease-out}
+
+.timer{font-family:var(--display);font-weight:800;font-size:clamp(4rem,22vw,6rem);font-variant-numeric:tabular-nums;line-height:1}
+.timer.low{color:var(--red)}
+.starter{background:var(--red-soft);border-radius:14px;padding:14px;font-size:1rem}
+.starter b{color:var(--red)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-row .btn{flex:1 1 140px}
+.reveal-list{display:flex;flex-direction:column;gap:8px}
+.reveal-list .who{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--red)}
+.rules{font-size:.92rem;color:var(--muted);margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:4px}
+.confirm{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+
+<script>
+const KATEGORIER = {
+  "Mad & drikke": ["Smørrebrød:middag","Flæskesteg:sprød","Rugbrød:mørk","Frikadeller:rund","Æbleskiver:vinter","Rød pølse:farve","Wienerbrød:udland","Koldskål:sommer","Leverpostej:varm","Risalamande:gave","Gløgg:krydderi","Remoulade:gul","Stjerneskud:himmel","Brunede kartofler:brun","Rullepølse:rund","Sol over Gudhjem:ø","Tarteletter:sprød","Hindbærsnitter:farve","Stegt flæsk:sprød","Øllebrød:gammel","Brunsviger:by","Kransekage:fest","Fastelavnsbolle:februar","Snobrød:pind","Tebirkes:morgen","Kanelsnegl:dyr","Hønsesalat:fugl","Marineret sild:sur","Medisterpølse:lang","Pebernødder:krydderi","Flødeboller:skum","Gammel Dansk:alder","Hvid labskovs:farve","Biksemad:mandag","Citronfromage:frugt","Karbonader:flad","Rødkål:farve","Brændende kærlighed:følelse"],
+  "Dyr": ["Pindsvin:have","Elefant:grå","Sæl:fisk","Ræv:rød","Pingvin:formel","Stork:ben","Hamster:lille","Kronhjort:konge","Egern:hale","Krokodille:ældgammel","Ko:sort-hvid","Blæksprutte:blæk","Grævling:nat","Odder:leg","Marsvin:dobbelt","Hugorm:mønster","Vandmand:gennemsigtig","Strandkrabbe:sidelæns","Sølvmåge:metal","Isfugl:kold","Muldvarp:blind","Dræbersnegl:farlig","Flagermus:lyd","Ål:lang","Snog:tunge","Bæver:træ","Skarv:kyst","Rød glente:farve","Mariehøne:lykke","Bænkebider:park","Narhval:enhjørning","Moskusokse:pels","Ørentvist:krop","Søko:græsser","Hornugle:klog"],
+  "Steder i Danmark": ["Tivoli:lys","Legoland:Jylland","Grenen:møde","Den Lille Havfrue:eventyr","Bornholm:solskin","Nyhavn:farver","Roskilde Festival:sommer","Møns Klint:højt","Strøget:lang","Rundetårn:form","Den Gamle By:tid","Vadehavet:fugle","Råbjerg Mile:bevæger","Christiania:grøn","Dyrehavsbakken:skov","Djurs Sommerland:skrig","Fanø:vind","Anholt:midt","Himmelbjerget:løgn","Rubjerg Knude:flyttet","Kronborg:teater","Amalienborg:kongelig","Dybbøl Mølle:vinger","Klitmøller:bølger","Ærø:bryllup","Storebæltsbroen:lang","Lalandia:ferie","Jellingstenene:gammel","Løkken:hvide huse","Kastellet:soldat","Hvide Sande:farve","Samsø:grøn","Mennesket ved Havet:udsigt","Kalvebod Fælled:flad","Lindholm Høje:vikinger","Stevns Klint:verdensarv"],
+  "I hjemmet": ["Køleskab:lys","Støvsuger:ledning","Sofa:weekend","Brødrister:spring","Opvaskemaskine:aften","Dyne:fjer","Spejl:glas","Fjernbetjening:væk","Stearinlys:vinter","Vaskemaskine:runde","Gardin:morgen","Kaffemaskine:vågen","Skohorn:gang","Viskestykke:stof","Brødkasse:låg","Kaffefilter:hvid","Dørmåtte:velkommen","Tørrestativ:metal","Skraldespand:lugt","Grydelapper:par","Brændeovn:knitre","Futsko:bløde","Termokande:møde","Køkkenrulle:rulle","PH-lampe:klassiker","Strygejern:damp","Proptrækker:spiral","Æggedeler:tråd","Ostehøvl:opfindelse","Kartoffelskræller:køkken","Dørklokke:gæst","Skuffe:hemmelig","Hyldebrædt:væg","Vatpinde:hvid"],
+  "Sport & fritid": ["Håndbold:landshold","Fodbold:rund","Cykling:Frankrig","Svømning:våd","Bowling:strike","Badminton:let","Fiskeri:tidlig","Skiferie:februar","Yoga:ro","Tennis:hvid","Golf:stille","Brætspil:familie","Petanque:sand","Krolf:sommerhus","Orienteringsløb:skov","Kajak:smal","Vinterbadning:mod","Ridning:stald","Spejder:knob","Floorball:hal","Dart:præcision","Bordtennis:hurtig","Kongespil:Sverige","Rundbold:skolegård","Sænke slagskibe:hav","Karate:Japan","Paintball:blå mærker","Minigolf:ferie","Discgolf:park","Kitesurfing:hav","Strikning:mormor","Puslespil:tålmodighed","Geocaching:gemt","Padel:ny"],
+  "Jobs": ["Politibetjent:regler","Frisør:spejl","Tandlæge:frygt","Pilot:rejse","Bager:mel","Skolelærer:lektier","Postbud:cykel","Brandmand:helt","Kok:hat","Sygeplejerske:vagt","Landmand:tidlig","Buschauffør:stop","Skorstensfejer:held","Bedemand:sort","Dyrlæge:pels","Fysioterapeut:øvelser","Fisker:tidlig","Tømrer:hammer","Elektriker:stød","Murer:støv","Pædagog:leg","Advokat:snak","Kassemedarbejder:bip","Taxichauffør:nat","Fotograf:smil","Journalist:spørgsmål","Præst:søndag","Gartner:jord","Revisor:kedelig","Tjener:drikkepenge","DJ:nat","Mekaniker:olie","Influencer:telefon","Bibliotekar:stille","Smed:varm","Livredder:fløjte"],
+  "Dansk hverdag": ["Julefrokost:fortrydelse","Hygge:tæppe","Cykelsti:vind","Fastelavn:kostume","Sankthans:heks","Studenterkørsel:hue","Pant:kroner","Rundkørsel:blink","Kolonihave:have","Mormor:kaffe","Fredagsbar:kollegaer","Påskefrokost:gul","Fødselsdagsflag:pind","Lagkage:creme","Kagemand:hoved","Mortensaften:november","Juleklip:papir","Pakkeleg:tyveri","Nissehue:spids","Konfirmation:penge","Blå mandag:farve","Sidste skoledag:vand","Rejsekort:bip","MitID:kode","e-Boks:digital","Efterskole:ung","SU:måned","Højskole:kursus","Højskolesangbogen:tyk","Grundlovsdag:tale","Gækkebrev:gåde","Madpakke:papir","Danskvand:kold","Dannebrog:himlen","Hyggesokker:uld","Juleaften:træ"],
+  "Ting & genstande": ["Paraply:åbne","Nøgle:lomme","Kuglepen:blæk","Høretelefoner:ører","Rygsæk:skuldre","Solbriller:sommer","Ur:arm","Tandbørste:to gange","Lommelygte:batteri","Saks:par","Kamera:minde","Ballon:luft","Sikkerhedsnål:lille","Papirclips:bøjet","Viskelæder:blyant","Hulmaskine:kontor","Termometer:syg","Oplader:ledning","Elastik:hår","Gaffatape:fikser","Tusch:tør","Fingerbøl:lille","Lup:detektiv","Kompas:retning","Tommestok:gul","Hængelås:metal","Træsko:larm","Cykelhjelm:sikkerhed","Regnslag:plastik","Kondibold:bold"],
+  "TV, film & musik": ["Matador:spil","Klovn:venner","Olsen-banden:mægtig","Rasmus Klump:båd","Ramasjang:morgen","Disney Sjov:tegnefilm","Robinson Ekspeditionen:stemme","Vild med dans:glimmer","X Factor:drøm","Melodi Grand Prix:point","Bonderøven:skæg","Forbrydelsen:regn","Borgen:magt","Krummerne:skole","Jul på Slottet:december","Pyrus:rød","Gasolin':70'erne","Kim Larsen:stemme","Aqua:90'erne","TV-avisen:aften","Den store bagedyst:telt","Paradise Hotel:sol","Lykke-Per:held","Riget:spøgelser","Flammen & Citronen:krig","Nissebanden:hemmelig","Bamse og Kylling:gul","Far til fire:klassiker","Huset på Christianshavn:nabo","Rejseholdet:bil"],
+  "Danske mærker": ["Netto:gul","Bilka:alt","Matas:duft","Jysk:søvn","Lego:fod","Carlsberg:sandsynligvis","Tuborg:grøn","Ga-Jol:stærk","Arla:køer","Anthon Berg:gave","Pandora:æske","Bang & Olufsen:dyr","Ecco:gå","Vestas:hvid","Mærsk:blå","Novo Nordisk:aktier","Joe & the Juice:musik","Lagkagehuset:kø","Flying Tiger:fugl","Søstrene Grene:familie","Sunset Boulevard:Hollywood","Harald Nyborg:navn","DSB:forsinket","Kims:sprød","Cocio:brun","Lakrids by Bülow:sort","Rejseplanen:telefon","Toms:skildpadde","Kohberg:morgen"]
+};
+
+const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], saved:[], imposters:1, off:[], hint:true};
+let settings = load() || structuredClone(DEFAULTS);
+let game = null;      // aktiv runde
+let timerId = null;
+const app = document.getElementById("app");
+
+function load(){try{const s=JSON.parse(localStorage.getItem("imposter-dk"));if(!s||!Array.isArray(s.players))return null;if(!Array.isArray(s.off))s.off=[];if(!Array.isArray(s.saved))s.saved=s.players.map(n=>String(n).trim()).filter(Boolean);return s}catch(e){return null}}
+function save(){try{localStorage.setItem("imposter-dk",JSON.stringify(settings))}catch(e){}}
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle = a => {a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const sortedSaved = () => settings.saved.slice().sort((a,b)=>a.localeCompare(b,"da"));
+const hasPlayer = n => settings.players.some(p=>p.trim().toLowerCase()===n.toLowerCase());
+function remember(list){
+  for(const raw of list){const n=String(raw).trim();if(n&&!settings.saved.some(x=>x.toLowerCase()===n.toLowerCase()))settings.saved.push(n)}
+  save();
+}
+const maxImp = n => Math.max(1,Math.floor((n-1)/2));
+const fmt = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+function render(){
+  clearInterval(timerId);
+  if(!game) return renderSetup();
+  ({handoff:renderHandoff,reveal:renderReveal,discuss:renderDiscuss,result:renderResult})[game.phase]();
+}
+
+/* ---------- Opsætning ---------- */
+function renderSetup(err){
+  const names = settings.players;
+  settings.imposters = Math.min(settings.imposters, maxImp(names.length));
+  app.innerHTML = `
+    <header class="brand"><div class="flag" aria-hidden="true"></div><h1>Hvem er <span>Imposteren?</span></h1></header>
+    <div class="section">
+      <div class="label">Hurtig tilføj</div>
+      <div class="panel">
+        ${settings.saved.length?`<div class="chips">${sortedSaved().map(n=>{const on=hasPlayer(n);return `
+          <span class="qa ${on?"on":""}"><label class="qa-name"><input type="checkbox" data-qa="${esc(n)}" ${on?"checked":""}><span>${esc(n)}</span></label><button class="qa-x" data-forget="${esc(n)}" aria-label="Glem ${esc(n)}">×</button></span>`}).join("")}</div>
+        <small class="hint-text">Sæt flueben for at tilføje en spiller. Tryk × for at glemme et navn.</small>`
+        :`<small class="hint-text">Navne bliver gemt her, når I har spillet en runde, så I hurtigt kan sætte flueben næste gang.</small>`}
+      </div>
+    </div>
+    <div class="section">
+      <div class="label">Spillere · ${names.length}</div>
+      <div class="panel">
+        <div class="players">${names.map((n,i)=>`
+          <div class="player"><span class="num">${i+1}</span>
+            <input type="text" id="p${i}" value="${esc(n)}" maxlength="20" aria-label="Spiller ${i+1}" data-i="${i}">
+            <button class="icon-btn" data-del="${i}" aria-label="Fjern ${esc(n)}" >×</button></div>`).join("")}
+        </div>
+        <button class="btn ghost small" id="add" ${names.length>=20?"disabled":""}>+ Tilføj spiller</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="label">Regler</div>
+      <div class="panel">
+        <div class="stepper"><div class="row-text"><b>Imposters</b><small>Max ${maxImp(names.length)} med ${names.length} spillere</small></div>
+          <div class="ctrl"><button class="icon-btn" id="impMinus" aria-label="Færre imposters">−</button><output>${settings.imposters}</output><button class="icon-btn" id="impPlus" aria-label="Flere imposters">+</button></div></div>
+        <label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
+          <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>
+      </div>
+    </div>
+    <div class="section">
+      <div class="label">Kategorier</div>
+      <div class="chips">${Object.keys(KATEGORIER).map(k=>`<button class="chip" data-cat="${esc(k)}" aria-pressed="${!settings.off.includes(k)}">${esc(k)} <span style="opacity:.6">${KATEGORIER[k].length}</span></button>`).join("")}</div>
+    </div>
+    ${err?`<p class="error">${esc(err)}</p>`:""}
+    <button class="btn primary" id="start">Start spillet</button>
+    <ul class="rules">
+      <li>Send telefonen rundt. Alle ser det hemmelige ord, undtagen imposteren.</li>
+      <li>Skiftes til at sige ét ord, der passer til det hemmelige ord.</li>
+      <li>Stem om, hvem der er imposteren. Bliver imposteren fanget, kan de stadig vinde ved at gætte ordet.</li>
+    </ul>`;
+
+  app.querySelectorAll("input[data-i]").forEach(inp=>{
+    inp.addEventListener("input",()=>{settings.players[+inp.dataset.i]=inp.value;save()});
+    inp.addEventListener("change",()=>{remember([inp.value]);renderSetup()});
+  });
+  app.querySelectorAll("[data-qa]").forEach(cb=>cb.onchange=()=>{
+    const n=cb.dataset.qa;
+    if(cb.checked){const empty=settings.players.findIndex(p=>!p.trim());if(empty>=0)settings.players[empty]=n;else if(settings.players.length<20)settings.players.push(n)}
+    else settings.players=settings.players.filter(p=>p.trim().toLowerCase()!==n.toLowerCase());
+    save();renderSetup();
+  });
+  app.querySelectorAll("[data-forget]").forEach(b=>b.onclick=()=>{settings.saved=settings.saved.filter(x=>x!==b.dataset.forget);save();renderSetup()});
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{settings.players.splice(+b.dataset.del,1);save();renderSetup()});
+  app.querySelector("#add").onclick=()=>{settings.players.push("");save();renderSetup();const l=app.querySelector(`#p${settings.players.length-1}`);l&&l.focus()};
+  const step=(id,key,d,min,max)=>app.querySelector(id).onclick=()=>{settings[key]=Math.min(max,Math.max(min,settings[key]+d));save();renderSetup()};
+  step("#impMinus","imposters",-1,1,maxImp(names.length)); step("#impPlus","imposters",1,1,maxImp(names.length));
+  app.querySelector("#hint").onchange=e=>{settings.hint=e.target.checked;save()};
+  app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{const k=b.dataset.cat;settings.off=settings.off.includes(k)?settings.off.filter(c=>c!==k):[...settings.off,k];save();b.setAttribute("aria-pressed",!settings.off.includes(k))});
+  app.querySelector("#start").onclick=startGame;
+}
+
+function startGame(){
+  remember(settings.players);
+  const players = settings.players.map((n,i)=>n.trim()||`Spiller ${i+1}`);
+  if(players.length<3) return renderSetup("I skal være mindst 3 spillere.");
+  if(new Set(players.map(p=>p.toLowerCase())).size!==players.length) return renderSetup("To spillere har samme navn. Giv dem forskellige navne.");
+  const cats = Object.keys(KATEGORIER).filter(k=>!settings.off.includes(k));
+  if(!cats.length) return renderSetup("Vælg mindst én kategori.");
+  const cat = cats[Math.floor(Math.random()*cats.length)];
+  const [word,hint] = KATEGORIER[cat][Math.floor(Math.random()*KATEGORIER[cat].length)].split(":");
+  const imps = shuffle(players.map((_,i)=>i)).slice(0,settings.imposters);
+  game = {players,cat,word,hint,imps,turn:0,phase:"handoff",starter:players[Math.floor(Math.random()*players.length)],confirmEnd:false};
+  render();
+}
+
+/* ---------- Send rundt ---------- */
+const progress = () => `<div class="progress" aria-label="Spiller ${game.turn+1} af ${game.players.length}">${game.players.map((_,i)=>`<i class="${i<game.turn?"done":""}"></i>`).join("")}</div>`;
+
+function renderHandoff(){
+  app.innerHTML = `<div class="stage handoff">
+    ${progress()}
+    <div class="label">Giv telefonen til</div>
+    <div class="big">${esc(game.players[game.turn])}</div>
+    <button class="card cover" id="peek">
+      <div class="eye" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <b>Tryk for at se din rolle</b>
+      <span style="color:var(--muted);font-size:.9rem">Sørg for at ingen andre kigger med</span>
+    </button>
+    ${quitBtn()}
+  </div>`;
+  app.querySelector("#peek").onclick=()=>{game.phase="reveal";render()};
+  bindQuit();
+}
+
+function renderReveal(){
+  const isImp = game.imps.includes(game.turn);
+  const last = game.turn===game.players.length-1;
+  const others = game.imps.length>1 ? `<span class="note">Der er ${game.imps.length} imposters i spillet.</span>` : "";
+  const card = isImp
+    ? `<div class="card spy"><span class="kicker">Du er</span><span class="secret">Imposteren</span>
+        ${settings.hint?`<span class="note">Dit stikord: <b>${esc(game.hint)}</b></span>`:""}
+        <span class="note">Lad som om du kender ordet.</span>${others}</div>`
+    : `<div class="card word"><span class="kicker">${esc(game.cat)}</span><span class="secret">${esc(game.word)}</span>
+        <span class="note">Find den, der ikke kender ordet.</span>${others}</div>`;
+  app.innerHTML = `<div class="stage">${progress()}<div class="label">${esc(game.players[game.turn])}</div>${card}
+    <button class="btn primary" id="next">${last?"Skjul og start diskussionen":"Skjul og giv videre"}</button></div>`;
+  app.querySelector("#next").onclick=()=>{
+    if(last){game.phase="discuss"}
+    else{game.turn++;game.phase="handoff"}
+    render();
+  };
+}
+
+/* ---------- Diskussion ---------- */
+function renderDiscuss(){
+  app.innerHTML = `<div class="stage">
+    <div class="label">Diskutér og stem</div>
+    <div class="starter"><b>${esc(game.starter)}</b> starter. Gå på omgang og sig ét ord hver, der passer til det hemmelige ord.</div>
+    <button class="btn primary" id="end">Afslør imposteren</button>
+    <div id="confirm" ${game.confirmEnd?"":"hidden"} class="confirm"><span>Har I stemt? Svaret bliver vist for alle.</span>
+      <div class="btn-row"><button class="btn ghost" id="no">Ikke endnu</button><button class="btn primary" id="yes">Vis svaret</button></div></div>
+    ${quitBtn()}
+  </div>`;
+  app.querySelector("#end").onclick=()=>{game.confirmEnd=true;app.querySelector("#confirm").hidden=false};
+  app.querySelector("#no").onclick=()=>{game.confirmEnd=false;app.querySelector("#confirm").hidden=true};
+  app.querySelector("#yes").onclick=()=>{game.phase="result";render()};
+  bindQuit();
+}
+
+/* ---------- Resultat ---------- */
+function renderResult(){
+  const names = game.imps.map(i=>game.players[i]);
+  app.innerHTML = `<div class="stage">
+    <div class="label">${names.length>1?"Imposterne var":"Imposteren var"}</div>
+    <div class="reveal-list">${names.map(n=>`<div class="who">${esc(n)}</div>`).join("")}</div>
+    <div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord</span><span class="secret">${esc(game.word)}</span><span class="note">${esc(game.cat)}</span></div>
+    <div class="btn-row"><button class="btn ghost" id="setup">Ret spillere</button><button class="btn primary" id="again">Spil igen</button></div>
+  </div>`;
+  app.querySelector("#again").onclick=startGame;
+  app.querySelector("#setup").onclick=()=>{game=null;render()};
+}
+
+const quitBtn = () => `<button class="btn ghost small" id="quit" style="align-self:center">Afbryd runden</button>`;
+function bindQuit(){const q=app.querySelector("#quit");if(q)q.onclick=()=>{game=null;render()}}
+
+render();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+
+</body>
+</html>
