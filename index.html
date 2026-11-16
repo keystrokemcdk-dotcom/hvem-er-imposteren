@@ -118,6 +118,23 @@ input[type=text]:focus{outline:2px solid var(--red);outline-offset:1px}
 .reveal-list .who{font-family:var(--display);font-weight:800;font-size:2rem;color:var(--red)}
 .rules{font-size:.92rem;color:var(--muted);margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:4px}
 .confirm{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{font:inherit;color:var(--ink);text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;min-width:0}
+.seg button b{font-family:var(--display);font-size:1.15rem}
+.seg button small{color:var(--muted);font-size:.82rem;line-height:1.35}
+.seg button[aria-checked="true"]{border-color:var(--red);background:var(--red-soft);box-shadow:inset 0 0 0 1px var(--red)}
+.seg button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.card.q .secret{font-size:clamp(1.4rem,6.2vw,1.85rem);line-height:1.18;text-wrap:balance}
+.card.compact{min-height:0;padding:20px}
+.answer{display:flex;flex-direction:column;gap:6px;text-align:left}
+.answer input{font-size:1.1rem;padding:14px}
+.answers{display:flex;flex-direction:column;gap:8px;text-align:left}
+.ans{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ans .who-s{font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ans .a{font-size:1.1rem;font-weight:500;overflow-wrap:anywhere}
+.ans.imp{border-color:var(--red);background:var(--red-soft)}
+.ans.imp .who-s{color:var(--red)}
+.sub{margin:0;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -139,24 +156,110 @@ const KATEGORIER = {
   "Danske mærker": ["Netto:gul","Bilka:alt","Matas:duft","Jysk:søvn","Lego:fod","Carlsberg:sandsynligvis","Tuborg:grøn","Ga-Jol:stærk","Arla:køer","Anthon Berg:gave","Pandora:æske","Bang & Olufsen:dyr","Ecco:gå","Vestas:hvid","Mærsk:blå","Novo Nordisk:aktier","Joe & the Juice:musik","Lagkagehuset:kø","Flying Tiger:fugl","Søstrene Grene:familie","Sunset Boulevard:Hollywood","Harald Nyborg:navn","DSB:forsinket","Kims:sprød","Cocio:brun","Lakrids by Bülow:sort","Rejseplanen:telefon","Toms:skildpadde","Kohberg:morgen"]
 };
 
-const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], saved:[], imposters:1, off:[], hint:true};
+const SPORGSMAAL = [
+  ["Hvilket dyr synes du er mest skræmmende?","Hvilket dyr synes du er grimmest?"],
+  ["Hvad er den bedste pizzatopping?","Hvad er den værste pizzatopping?"],
+  ["Hvor mange timer sover du på en normal nat?","Hvor mange timer bruger du på din telefon om dagen?"],
+  ["Hvilket land vil du helst rejse til?","Hvilket land vil du aldrig rejse til?"],
+  ["Hvad er din yndlingsfarve?","Hvilken farve ville du aldrig male dit værelse?"],
+  ["Hvor mange kopper kaffe eller te drikker du om dagen?","Hvor mange gange har du været forelsket?"],
+  ["Hvilken kendis ville du gerne spise middag med?","Hvilken kendis kan du ikke fordrage?"],
+  ["Hvad er din yndlingsfilm?","Hvilken film har du set flest gange?"],
+  ["Hvad er det bedste slik?","Hvad er det mest overvurderede slik?"],
+  ["Hvor gammel var du, da du fik din første telefon?","Hvor gammel vil du være, når du får børn?"],
+  ["Hvilken superkraft vil du helst have?","Hvilken superkraft ville være mest ubrugelig?"],
+  ["Hvad er det bedste job i verden?","Hvilket job ville du hade at have?"],
+  ["Hvor mange søskende ville være perfekt?","Hvor mange kæledyr vil du gerne have?"],
+  ["Hvad ville du tage med på en øde ø?","Hvad ville du købe først, hvis du vandt i Lotto?"],
+  ["Hvilken sport er sjovest at se?","Hvilken sport er kedeligst at se?"],
+  ["Hvad er den bedste årstid?","Hvilken årstid er du mindst glad for?"],
+  ["Hvad er/var dit yndlingsfag i skolen?","Hvilket fag er/var du dårligst til?"],
+  ["Hvem i rummet er sjovest?","Hvem i rummet ville overleve længst i en zombieapokalypse?"],
+  ["Hvem i rummet bliver først rig?","Hvem i rummet kommer oftest for sent?"],
+  ["Hvem i rummet ville være den bedste statsminister?","Hvem i rummet ville være den værste chauffør?"],
+  ["Hvem i rummet har den bedste musiksmag?","Hvem i rummet bruger mest tid på telefonen?"],
+  ["Hvem i rummet ville vinde Robinson?","Hvem i rummet ville blive stemt først ud af Robinson?"],
+  ["Hvem i rummet er bedst til at lave mad?","Hvem i rummet spiser mest?"],
+  ["Hvem i rummet bliver berømt?","Hvem i rummet ender i fængsel?"],
+  ["Hvem i rummet ville du ringe til, hvis du var i problemer?","Hvem i rummet kender du bedst?"],
+  ["Hvor meget ville du betale for en billet til din yndlingskoncert?","Hvor mange penge skulle du have for at spise en levende orm?"],
+  ["Hvad er den bedste gave, du har fået?","Hvad er den værste gave, du har fået?"],
+  ["Hvilken app bruger du mest?","Hvilken app ville du slette først?"],
+  ["Hvad er dit yndlingsdyr?","Hvilket dyr ligner du mest?"],
+  ["Hvor mange timer kunne du klare dig uden din telefon?","Hvor mange timer kan du holde dig vågen i træk?"],
+  ["Hvad er den bedste morgenmad?","Hvad spiser du, når du er ked af det?"],
+  ["Hvilken by i Danmark er bedst?","Hvilken by i Danmark ville du aldrig bo i?"],
+  ["Hvad er den bedste drik?","Hvad drikker du, når du er syg?"],
+  ["Hvilken sang gør dig i godt humør?","Hvilken sang kan du ikke få ud af hovedet?"],
+  ["Hvad er din drømmebil?","Hvilken bil ville være pinlig at køre i?"],
+  ["Hvor mange lande har du besøgt?","Hvor mange gange er du flyttet?"],
+  ["Hvad er dit yndlingstal fra 1 til 10?","Hvor sulten er du lige nu fra 1 til 10?"],
+  ["Hvor god er du til at danse fra 1 til 10?","Hvor bange er du for mørke fra 1 til 10?"],
+  ["Hvad er du mest bange for?","Hvad ville du mindst have lyst til at gøre foran mange mennesker?"],
+  ["Hvilken tegnefilmsfigur ville du gerne være?","Hvilken tegnefilmsfigur ville du gerne date?"],
+  ["Hvad ville du hedde, hvis du skulle skifte navn?","Hvad ville du kalde din hund?"],
+  ["Hvilken alder ville du gerne være resten af livet?","Hvor gammel føler du dig indeni?"],
+  ["Hvad er den bedste is-smag?","Hvad er den værste is-smag?"],
+  ["Hvor mange armbøjninger kan du tage?","Hvor mange æg kan du spise på én gang?"],
+  ["Hvad er det bedste ved Danmark?","Hvad er det værste ved Danmark?"],
+  ["Hvilken lyd elsker du?","Hvilken lyd hader du?"],
+  ["Hvad laver du typisk en søndag?","Hvad laver du, når du ikke kan sove?"],
+  ["Hvem er din yndlingsartist lige nu?","Hvilken artist hørte du mest som barn?"],
+  ["Hvad ville du gøre med en million kroner?","Hvad ville du gøre, hvis du var usynlig i en dag?"],
+  ["Hvilken film skal alle se?","Hvilken film har fået dig til at græde?"],
+  ["Hvor i verden ville du helst bo?","Hvor ville du tage hen på bryllupsrejse?"],
+  ["Hvilken grøntsag er bedst?","Hvilken grøntsag hadede du som barn?"],
+  ["Hvad er dit yndlingsspil?","Hvilket spil bliver du sur af at tabe i?"],
+  ["Hvilket dyr ville være det bedste kæledyr?","Hvilket dyr ville vinde i en kamp mod et menneske?"],
+  ["Hvad er det vigtigste, du har lært i skolen?","Hvad er det mest ubrugelige, du har lært i skolen?"],
+  ["Hvor mange timer om ugen træner du?","Hvor mange timer om ugen ser du serier?"],
+  ["Hvilket måltid er dagens bedste?","Hvilket måltid springer du oftest over?"],
+  ["Hvilken højtid er bedst?","Hvilken højtid er mest stressende?"],
+  ["Hvad er det bedste pålæg?","Hvad er det kedeligste pålæg?"],
+  ["Hvilken farve ville du farve dit hår?","Hvilken farve har dit yndlingstøj?"],
+  ["Hvem er den bedste fodboldspiller nogensinde?","Hvilken sportsstjerne ville du gerne bytte liv med?"],
+  ["Hvad er det bedste ved sommerferien?","Hvad gør du altid på ferie?"],
+  ["Hvilket ord siger du alt for tit?","Hvilket ord hader du?"],
+  ["Hvilken emoji bruger du mest?","Hvilken emoji beskriver dig bedst?"],
+  ["Hvor mange par sko har du?","Hvor mange hættetrøjer har du?"],
+  ["Hvor spiser du helst fastfood?","Hvor spiser du, når du har tømmermænd?"],
+  ["Hvad ville du være, da du var barn?","Hvilket job ville du være dårligst til?"],
+  ["Hvor er det bedste sted at gå på date?","Hvor er det værste sted at gå på date?"],
+  ["Hvilken lov ville du indføre, hvis du var statsminister?","Hvilken regel hader du mest?"],
+  ["Hvad er den bedste chipssmag?","Hvad spiser du helst, når du ser film?"],
+  ["Hvilket årti ville du gerne have levet i?","Hvilket årti har den bedste musik?"],
+  ["Hvor mange minutter bruger du på at gøre dig klar om morgenen?","Hvor mange minutter tager det dig at falde i søvn?"],
+  ["Hvad er det bedste program på TV?","Hvad så du altid på TV som barn?"],
+  ["Hvilken kage er bedst?","Hvad ville du bage, hvis du var med i Den store bagedyst?"],
+  ["Hvad er den bedste julesang?","Hvilken julesang er du træt af?"]
+];
+
+const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], saved:[], imposters:1, off:[], hint:true, mode:"ord", inApp:true};
 let settings = load() || structuredClone(DEFAULTS);
 let game = null;      // aktiv runde
 let timerId = null;
+const recent = {ord:[], spg:[]};   // undgå gentagelser i samme session
 const app = document.getElementById("app");
 
-function load(){try{const s=JSON.parse(localStorage.getItem("imposter-dk"));if(!s||!Array.isArray(s.players))return null;if(!Array.isArray(s.off))s.off=[];if(!Array.isArray(s.saved))s.saved=s.players.map(n=>String(n).trim()).filter(Boolean);return s}catch(e){return null}}
+function load(){try{const s=JSON.parse(localStorage.getItem("imposter-dk"));if(!s||!Array.isArray(s.players))return null;if(!Array.isArray(s.off))s.off=[];if(!Array.isArray(s.saved))s.saved=s.players.map(n=>String(n).trim()).filter(Boolean);return Object.assign(structuredClone(DEFAULTS),s)}catch(e){return null}}
 function save(){try{localStorage.setItem("imposter-dk",JSON.stringify(settings))}catch(e){}}
 const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const shuffle = a => {a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick = a => a[Math.floor(Math.random()*a.length)];
 const sortedSaved = () => settings.saved.slice().sort((a,b)=>a.localeCompare(b,"da"));
 const hasPlayer = n => settings.players.some(p=>p.trim().toLowerCase()===n.toLowerCase());
 function remember(list){
   for(const raw of list){const n=String(raw).trim();if(n&&!settings.saved.some(x=>x.toLowerCase()===n.toLowerCase()))settings.saved.push(n)}
   save();
 }
+function pickFresh(keys, mode){
+  let free = keys.filter(k=>!recent[mode].includes(k));
+  if(!free.length){recent[mode]=[];free=keys}
+  const k = pick(free); recent[mode].push(k);
+  if(recent[mode].length>Math.floor(keys.length*0.7)) recent[mode].shift();
+  return k;
+}
 const maxImp = n => Math.max(1,Math.floor((n-1)/2));
-const fmt = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 
 function render(){
   clearInterval(timerId);
@@ -165,11 +268,19 @@ function render(){
 }
 
 /* ---------- Opsætning ---------- */
+const MODES = [["ord","Ord","Alle får samme ord. Imposteren får kun et stikord."],["spg","Spørgsmål","Imposteren får et andet spørgsmål og ved det ikke selv."]];
 function renderSetup(err){
   const names = settings.players;
+  const spg = settings.mode==="spg";
   settings.imposters = Math.min(settings.imposters, maxImp(names.length));
   app.innerHTML = `
     <header class="brand"><div class="flag" aria-hidden="true"></div><h1>Hvem er <span>Imposteren?</span></h1></header>
+    <div class="section">
+      <div class="label">Spiltype</div>
+      <div class="seg" role="radiogroup" aria-label="Spiltype">${MODES.map(([k,t,d])=>`
+        <button role="radio" aria-checked="${settings.mode===k}" data-mode="${k}"><b>${t}</b><small>${d}</small></button>`).join("")}
+      </div>
+    </div>
     <div class="section">
       <div class="label">Hurtig tilføj</div>
       <div class="panel">
@@ -185,7 +296,7 @@ function renderSetup(err){
         <div class="players">${names.map((n,i)=>`
           <div class="player"><span class="num">${i+1}</span>
             <input type="text" id="p${i}" value="${esc(n)}" maxlength="20" aria-label="Spiller ${i+1}" data-i="${i}">
-            <button class="icon-btn" data-del="${i}" aria-label="Fjern ${esc(n)}" >×</button></div>`).join("")}
+            <button class="icon-btn" data-del="${i}" aria-label="Fjern ${esc(n)}">×</button></div>`).join("")}
         </div>
         <button class="btn ghost small" id="add" ${names.length>=20?"disabled":""}>+ Tilføj spiller</button>
       </div>
@@ -195,22 +306,29 @@ function renderSetup(err){
       <div class="panel">
         <div class="stepper"><div class="row-text"><b>Imposters</b><small>Max ${maxImp(names.length)} med ${names.length} spillere</small></div>
           <div class="ctrl"><button class="icon-btn" id="impMinus" aria-label="Færre imposters">−</button><output>${settings.imposters}</output><button class="icon-btn" id="impPlus" aria-label="Flere imposters">+</button></div></div>
-        <label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
-          <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>
+        ${spg
+          ?`<label class="toggle" for="inapp"><span class="row-text"><b>Skriv svar i appen</b><small>${settings.inApp?"Svarene vises samlet, når alle har svaret":"Hver spiller skriver selv sit svar ned, fx i Noter"}</small></span>
+              <input type="checkbox" class="switch" id="inapp" ${settings.inApp?"checked":""}></label>`
+          :`<label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
+              <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>`}
       </div>
     </div>
-    <div class="section">
+    ${spg?"":`<div class="section">
       <div class="label">Kategorier</div>
       <div class="chips">${Object.keys(KATEGORIER).map(k=>`<button class="chip" data-cat="${esc(k)}" aria-pressed="${!settings.off.includes(k)}">${esc(k)} <span style="opacity:.6">${KATEGORIER[k].length}</span></button>`).join("")}</div>
-    </div>
+    </div>`}
     ${err?`<p class="error">${esc(err)}</p>`:""}
     <button class="btn primary" id="start">Start spillet</button>
-    <ul class="rules">
+    <ul class="rules">${spg?`
+      <li>Send telefonen rundt. Alle får et spørgsmål og svarer på det${settings.inApp?" i appen":" på et stykke papir eller i Noter"}.</li>
+      <li>Imposteren får et lidt andet spørgsmål, men ved ikke selv, at de er imposter.</li>
+      <li>Læs svarene højt, afslør det rigtige spørgsmål, og stem om, hvem der har svaret på noget andet.</li>`:`
       <li>Send telefonen rundt. Alle ser det hemmelige ord, undtagen imposteren.</li>
       <li>Skiftes til at sige ét ord, der passer til det hemmelige ord.</li>
-      <li>Stem om, hvem der er imposteren. Bliver imposteren fanget, kan de stadig vinde ved at gætte ordet.</li>
+      <li>Stem om, hvem der er imposteren. Bliver imposteren fanget, kan de stadig vinde ved at gætte ordet.</li>`}
     </ul>`;
 
+  app.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{settings.mode=b.dataset.mode;save();renderSetup()});
   app.querySelectorAll("input[data-i]").forEach(inp=>{
     inp.addEventListener("input",()=>{settings.players[+inp.dataset.i]=inp.value;save()});
     inp.addEventListener("change",()=>{remember([inp.value]);renderSetup()});
@@ -226,7 +344,8 @@ function renderSetup(err){
   app.querySelector("#add").onclick=()=>{settings.players.push("");save();renderSetup();const l=app.querySelector(`#p${settings.players.length-1}`);l&&l.focus()};
   const step=(id,key,d,min,max)=>app.querySelector(id).onclick=()=>{settings[key]=Math.min(max,Math.max(min,settings[key]+d));save();renderSetup()};
   step("#impMinus","imposters",-1,1,maxImp(names.length)); step("#impPlus","imposters",1,1,maxImp(names.length));
-  app.querySelector("#hint").onchange=e=>{settings.hint=e.target.checked;save()};
+  const hint=app.querySelector("#hint"); if(hint) hint.onchange=e=>{settings.hint=e.target.checked;save()};
+  const inapp=app.querySelector("#inapp"); if(inapp) inapp.onchange=e=>{settings.inApp=e.target.checked;save();renderSetup()};
   app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{const k=b.dataset.cat;settings.off=settings.off.includes(k)?settings.off.filter(c=>c!==k):[...settings.off,k];save();b.setAttribute("aria-pressed",!settings.off.includes(k))});
   app.querySelector("#start").onclick=startGame;
 }
@@ -236,17 +355,29 @@ function startGame(){
   const players = settings.players.map((n,i)=>n.trim()||`Spiller ${i+1}`);
   if(players.length<3) return renderSetup("I skal være mindst 3 spillere.");
   if(new Set(players.map(p=>p.toLowerCase())).size!==players.length) return renderSetup("To spillere har samme navn. Giv dem forskellige navne.");
-  const cats = Object.keys(KATEGORIER).filter(k=>!settings.off.includes(k));
-  if(!cats.length) return renderSetup("Vælg mindst én kategori.");
-  const cat = cats[Math.floor(Math.random()*cats.length)];
-  const [word,hint] = KATEGORIER[cat][Math.floor(Math.random()*KATEGORIER[cat].length)].split(":");
-  const imps = shuffle(players.map((_,i)=>i)).slice(0,settings.imposters);
-  game = {players,cat,word,hint,imps,turn:0,phase:"handoff",starter:players[Math.floor(Math.random()*players.length)],confirmEnd:false};
+  const imps = shuffle(players.map((_,i)=>i)).slice(0,Math.min(settings.imposters,maxImp(players.length)));
+  const base = {players,imps,turn:0,phase:"handoff",starter:pick(players),confirmEnd:false};
+  if(settings.mode==="spg"){
+    const [real,fake] = SPORGSMAAL[+pickFresh(SPORGSMAAL.map((_,i)=>String(i)),"spg")];
+    game = {...base,mode:"spg",real,fake,inApp:settings.inApp,answers:players.map(()=>""),qShown:false};
+  } else {
+    const cats = Object.keys(KATEGORIER).filter(k=>!settings.off.includes(k));
+    if(!cats.length) return renderSetup("Vælg mindst én kategori.");
+    const [cat,entry] = pickFresh(cats.flatMap(c=>KATEGORIER[c].map(w=>c+"|"+w)),"ord").split("|");
+    const [word,hint] = entry.split(":");
+    game = {...base,mode:"ord",cat,word,hint,hintOn:settings.hint};
+  }
   render();
 }
 
 /* ---------- Send rundt ---------- */
 const progress = () => `<div class="progress" aria-label="Spiller ${game.turn+1} af ${game.players.length}">${game.players.map((_,i)=>`<i class="${i<game.turn?"done":""}"></i>`).join("")}</div>`;
+const isLast = () => game.turn===game.players.length-1;
+function advance(){
+  if(isLast()) game.phase="discuss";
+  else {game.turn++;game.phase="handoff"}
+  render();
+}
 
 function renderHandoff(){
   app.innerHTML = `<div class="stage handoff">
@@ -255,7 +386,7 @@ function renderHandoff(){
     <div class="big">${esc(game.players[game.turn])}</div>
     <button class="card cover" id="peek">
       <div class="eye" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
-      <b>Tryk for at se din rolle</b>
+      <b>${game.mode==="spg"?"Tryk for at se dit spørgsmål":"Tryk for at se din rolle"}</b>
       <span style="color:var(--muted);font-size:.9rem">Sørg for at ingen andre kigger med</span>
     </button>
     ${quitBtn()}
@@ -265,47 +396,96 @@ function renderHandoff(){
 }
 
 function renderReveal(){
+  if(game.mode==="spg") return renderQuestion();
   const isImp = game.imps.includes(game.turn);
-  const last = game.turn===game.players.length-1;
   const others = game.imps.length>1 ? `<span class="note">Der er ${game.imps.length} imposters i spillet.</span>` : "";
   const card = isImp
     ? `<div class="card spy"><span class="kicker">Du er</span><span class="secret">Imposteren</span>
-        ${settings.hint?`<span class="note">Dit stikord: <b>${esc(game.hint)}</b></span>`:""}
+        ${game.hintOn?`<span class="note">Dit stikord: <b>${esc(game.hint)}</b></span>`:""}
         <span class="note">Lad som om du kender ordet.</span>${others}</div>`
     : `<div class="card word"><span class="kicker">${esc(game.cat)}</span><span class="secret">${esc(game.word)}</span>
         <span class="note">Find den, der ikke kender ordet.</span>${others}</div>`;
   app.innerHTML = `<div class="stage">${progress()}<div class="label">${esc(game.players[game.turn])}</div>${card}
-    <button class="btn primary" id="next">${last?"Skjul og start diskussionen":"Skjul og giv videre"}</button></div>`;
-  app.querySelector("#next").onclick=()=>{
-    if(last){game.phase="discuss"}
-    else{game.turn++;game.phase="handoff"}
-    render();
-  };
+    <button class="btn primary" id="next">${isLast()?"Skjul og start diskussionen":"Skjul og giv videre"}</button></div>`;
+  app.querySelector("#next").onclick=advance;
+}
+
+function renderQuestion(){
+  const q = game.imps.includes(game.turn) ? game.fake : game.real;
+  const label = isLast()
+    ? (game.inApp?"Gem svar og se svarene":"Skjul og læs svarene op")
+    : (game.inApp?"Gem svar og giv videre":"Skjul og giv videre");
+  app.innerHTML = `<div class="stage">${progress()}<div class="label">${esc(game.players[game.turn])}</div>
+    <div class="card word q"><span class="kicker">Dit spørgsmål</span><span class="secret">${esc(q)}</span>
+      ${game.inApp?"":`<span class="note">Skriv dit svar ned, fx i Noter. Vis det ikke til nogen endnu.</span>`}</div>
+    ${game.inApp?`<label class="answer" for="ans"><span class="label">Dit svar</span>
+      <input type="text" id="ans" maxlength="80" autocomplete="off" placeholder="Skriv dit svar her"></label>`:""}
+    <button class="btn primary" id="next" ${game.inApp?"disabled":""}>${label}</button></div>`;
+  const next = app.querySelector("#next"), ans = app.querySelector("#ans");
+  if(ans){
+    ans.oninput=()=>{next.disabled=!ans.value.trim()};
+    ans.onkeydown=e=>{if(e.key==="Enter"&&ans.value.trim())next.click()};
+  }
+  next.onclick=()=>{if(ans)game.answers[game.turn]=ans.value.trim();advance()};
 }
 
 /* ---------- Diskussion ---------- */
+const confirmBox = () => `<div id="confirm" ${game.confirmEnd?"":"hidden"} class="confirm"><span>Har I stemt? Svaret bliver vist for alle.</span>
+      <div class="btn-row"><button class="btn ghost" id="no">Ikke endnu</button><button class="btn primary" id="yes">Vis svaret</button></div></div>`;
+function bindConfirm(){
+  app.querySelector("#end").onclick=()=>{game.confirmEnd=true;app.querySelector("#confirm").hidden=false};
+  app.querySelector("#no").onclick=()=>{game.confirmEnd=false;app.querySelector("#confirm").hidden=true};
+  app.querySelector("#yes").onclick=()=>{game.phase="result";render()};
+}
+
 function renderDiscuss(){
+  if(game.mode==="spg") return renderAnswers();
   app.innerHTML = `<div class="stage">
     <div class="label">Diskutér og stem</div>
     <div class="starter"><b>${esc(game.starter)}</b> starter. Gå på omgang og sig ét ord hver, der passer til det hemmelige ord.</div>
     <button class="btn primary" id="end">Afslør imposteren</button>
-    <div id="confirm" ${game.confirmEnd?"":"hidden"} class="confirm"><span>Har I stemt? Svaret bliver vist for alle.</span>
-      <div class="btn-row"><button class="btn ghost" id="no">Ikke endnu</button><button class="btn primary" id="yes">Vis svaret</button></div></div>
+    ${confirmBox()}
     ${quitBtn()}
   </div>`;
-  app.querySelector("#end").onclick=()=>{game.confirmEnd=true;app.querySelector("#confirm").hidden=false};
-  app.querySelector("#no").onclick=()=>{game.confirmEnd=false;app.querySelector("#confirm").hidden=true};
-  app.querySelector("#yes").onclick=()=>{game.phase="result";render()};
+  bindConfirm(); bindQuit();
+}
+
+const answersList = mark => `<div class="answers">${game.players.map((p,i)=>{const imp=mark&&game.imps.includes(i);return `
+  <div class="ans ${imp?"imp":""}"><span class="who-s">${esc(p)}${imp?" · imposter":""}</span><span class="a">${esc(game.answers[i])}</span></div>`}).join("")}</div>`;
+
+function renderAnswers(){
+  const answers = game.inApp ? answersList(false)
+    : `<div class="starter"><b>${esc(game.starter)}</b> starter. Læs jeres svar højt én ad gangen.</div>`;
+  app.innerHTML = `<div class="stage">
+    ${game.qShown?`
+      <div class="card word q compact"><span class="kicker">Det rigtige spørgsmål</span><span class="secret">${esc(game.real)}</span></div>
+      ${answers}
+      <p class="sub">Hvem har svaret på et andet spørgsmål? Diskutér og stem.</p>
+      <button class="btn primary" id="end">Afslør imposter</button>
+      ${confirmBox()}`
+    :`
+      <div class="label">${game.inApp?"Svarene":"Læs svarene op"}</div>
+      ${answers}
+      <button class="btn primary" id="showQ">Afslør rigtige spørgsmål</button>`}
+    ${quitBtn()}
+  </div>`;
+  if(game.qShown) bindConfirm();
+  else app.querySelector("#showQ").onclick=()=>{game.qShown=true;render()};
   bindQuit();
 }
 
 /* ---------- Resultat ---------- */
 function renderResult(){
   const names = game.imps.map(i=>game.players[i]);
+  const reveal = game.mode==="spg"
+    ? `<div class="card spy q compact"><span class="kicker">${names.length>1?"Imposternes":"Imposterens"} spørgsmål</span><span class="secret">${esc(game.fake)}</span></div>
+       <div class="card word q compact"><span class="kicker">Det rigtige spørgsmål</span><span class="secret">${esc(game.real)}</span></div>
+       ${game.inApp?answersList(true):""}`
+    : `<div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord</span><span class="secret">${esc(game.word)}</span><span class="note">${esc(game.cat)}</span></div>`;
   app.innerHTML = `<div class="stage">
     <div class="label">${names.length>1?"Imposterne var":"Imposteren var"}</div>
     <div class="reveal-list">${names.map(n=>`<div class="who">${esc(n)}</div>`).join("")}</div>
-    <div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord</span><span class="secret">${esc(game.word)}</span><span class="note">${esc(game.cat)}</span></div>
+    ${reveal}
     <div class="btn-row"><button class="btn ghost" id="setup">Ret spillere</button><button class="btn primary" id="again">Spil igen</button></div>
   </div>`;
   app.querySelector("#again").onclick=startGame;
