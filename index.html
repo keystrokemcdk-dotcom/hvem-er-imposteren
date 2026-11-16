@@ -135,6 +135,37 @@ input[type=text]:focus{outline:2px solid var(--red);outline-offset:1px}
 .ans.imp{border-color:var(--red);background:var(--red-soft)}
 .ans.imp .who-s{color:var(--red)}
 .sub{margin:0;color:var(--muted)}
+.brand{flex-wrap:wrap}
+.join-btn{margin-left:auto}
+.sub-label{font-size:.8rem;font-weight:700;color:var(--muted);margin-top:4px}
+.num.tag{width:auto;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--red)}
+.code-row{display:flex;gap:14px;align-items:center;justify-content:space-between}
+.code-row .row-text{gap:4px}
+.code{font-family:var(--display);font-weight:800;font-size:2.6rem;letter-spacing:.12em;line-height:1;color:var(--red)}
+.qr{width:132px;height:132px;flex:none;background:#fff;border-radius:10px;padding:4px}
+.qr svg{width:100%;height:100%;display:block}
+.qr svg rect[fill="#ffffff"],.qr svg path{shape-rendering:crispEdges}
+.link-row{display:flex;gap:8px}
+.link-row input{font-size:.85rem;color:var(--muted)}
+.party-status,.conn-banner{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.conn-banner{background:var(--red-soft);color:var(--ink);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--red);animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.remotes{display:flex;flex-direction:column;gap:6px}
+.remote{display:flex;align-items:center;gap:10px}
+.remote .rname{flex:1;min-width:0;font-weight:500;overflow-wrap:anywhere}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line);flex:none}
+.dot.on{background:#2e9e5b}
+.status-list{display:flex;flex-direction:column;gap:6px;text-align:left}
+.srow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.srow span:first-child{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.badge{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.srow.ok .badge{color:#2e9e5b}
+.wait-h{font-size:1.6rem}
+.remote-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.panel.join{text-align:left}
+.code-input{text-transform:uppercase;letter-spacing:.3em;font-family:var(--display);font-weight:800;font-size:1.6rem!important;text-align:center}
+@media (max-width:380px){.code-row{flex-direction:column;align-items:flex-start}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -234,20 +265,27 @@ const SPORGSMAAL = [
   ["Hvad er den bedste julesang?","Hvilken julesang er du træt af?"]
 ];
 
-const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], saved:[], imposters:1, off:[], hint:true, mode:"ord", inApp:true};
+const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], guests:[], saved:[], imposters:1, off:[], hint:true, mode:"ord", inApp:true,
+                  play:"local", hostName:"", myName:"", partyCode:"", clientId:""};
 let settings = load() || structuredClone(DEFAULTS);
-let game = null;      // aktiv runde
-let timerId = null;
+if(!settings.clientId){settings.clientId=Math.random().toString(36).slice(2,12);save()}
+let game = null;      // aktiv runde (på værtens / den lokale telefon)
+let party = null;     // værtens party: {peer, code, status, err, remotes: Map}
+let remote = null;    // når denne telefon er tilsluttet en andens party
+let joinView = null;  // {code, err} når "Deltag i party"-skærmen vises
 const recent = {ord:[], spg:[]};   // undgå gentagelser i samme session
 const app = document.getElementById("app");
 
 function load(){try{const s=JSON.parse(localStorage.getItem("imposter-dk"));if(!s||!Array.isArray(s.players))return null;if(!Array.isArray(s.off))s.off=[];if(!Array.isArray(s.saved))s.saved=s.players.map(n=>String(n).trim()).filter(Boolean);return Object.assign(structuredClone(DEFAULTS),s)}catch(e){return null}}
 function save(){try{localStorage.setItem("imposter-dk",JSON.stringify(settings))}catch(e){}}
-const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const shuffle = a => {a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const pick = a => a[Math.floor(Math.random()*a.length)];
+const isParty = () => settings.play==="party";
+const listKey = () => isParty() ? "guests" : "players";
+const L = () => settings[listKey()];
 const sortedSaved = () => settings.saved.slice().sort((a,b)=>a.localeCompare(b,"da"));
-const hasPlayer = n => settings.players.some(p=>p.trim().toLowerCase()===n.toLowerCase());
+const hasPlayer = n => L().some(p=>p.trim().toLowerCase()===n.toLowerCase());
 function remember(list){
   for(const raw of list){const n=String(raw).trim();if(n&&!settings.saved.some(x=>x.toLowerCase()===n.toLowerCase()))settings.saved.push(n)}
   save();
@@ -261,53 +299,85 @@ function pickFresh(keys, mode){
 }
 const maxImp = n => Math.max(1,Math.floor((n-1)/2));
 
+/* ---------- Biblioteker og skærmlås ---------- */
+const scripts = {};
+function loadScript(src){
+  return scripts[src] ||= new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;
+    s.onerror=()=>{delete scripts[src];s.remove();rej(new Error(src))};document.head.appendChild(s)});
+}
+const PEER_URL = "vendor/peerjs.min.js", QR_URL = "vendor/qrcode.js";
+const peerOpts = () => Object.assign({debug:0}, window.PEER_OPTS||{});
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const newCode = () => Array.from({length:4},()=>pick([...CODE_CHARS])).join("");
+const peerId = code => "hvem-er-imposteren-dk-"+code;
+let wakeLock = null;
+async function keepAwake(){
+  if(!(party||remote) || wakeLock || !("wakeLock" in navigator) || document.visibilityState!=="visible") return;
+  try{wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>{wakeLock=null})}catch(e){}
+}
+
 function render(){
-  clearInterval(timerId);
-  if(!game) return renderSetup();
-  ({handoff:renderHandoff,reveal:renderReveal,discuss:renderDiscuss,result:renderResult})[game.phase]();
+  if(remote) return renderRemote();
+  if(joinView) return renderJoin();
+  if(!game) renderSetup();
+  else ({handoff:renderHandoff,reveal:renderReveal,waiting:renderWaiting,discuss:renderDiscuss,result:renderResult})[game.phase]();
+  if(party) broadcast();
 }
 
 /* ---------- Opsætning ---------- */
 const MODES = [["ord","Ord","Alle får samme ord. Imposteren får kun et stikord."],["spg","Spørgsmål","Imposteren får et andet spørgsmål og ved det ikke selv."]];
+const PLAYS = [["local","Én telefon","Telefonen sendes rundt."],["party","Party","Alle spiller på deres egen telefon."]];
+const seg = (items,cur,attr,label) => `<div class="seg" role="radiogroup" aria-label="${label}">${items.map(([k,t,d])=>`
+  <button role="radio" aria-checked="${cur===k}" data-${attr}="${k}"><b>${t}</b><small>${d}</small></button>`).join("")}</div>`;
+const remoteList = () => party ? [...party.remotes.values()] : [];
+const totalPlayers = () => isParty() ? 1 + remoteList().filter(r=>r.connected).length + settings.guests.length : settings.players.length;
+
 function renderSetup(err){
-  const names = settings.players;
-  const spg = settings.mode==="spg";
-  settings.imposters = Math.min(settings.imposters, maxImp(names.length));
+  const spg = settings.mode==="spg", pty = isParty();
+  const names = L(), total = totalPlayers();
+  settings.imposters = Math.min(settings.imposters, maxImp(total));
+  if(pty) startHosting();
   app.innerHTML = `
-    <header class="brand"><div class="flag" aria-hidden="true"></div><h1>Hvem er <span>Imposteren?</span></h1></header>
+    <header class="brand"><div class="flag" aria-hidden="true"></div><h1>Hvem er <span>Imposteren?</span></h1>
+      <button class="btn ghost small join-btn" id="toJoin">Deltag i party</button></header>
+    <div class="section"><div class="label">Sådan spiller I</div>${seg(PLAYS,settings.play,"play","Sådan spiller I")}</div>
+    <div class="section"><div class="label">Spiltype</div>${seg(MODES,settings.mode,"mode","Spiltype")}</div>
+    ${pty?`<div class="section"><div class="label">Party</div><div class="panel" id="partyPanel">${partyPanelHTML()}</div></div>`:""}
     <div class="section">
-      <div class="label">Spiltype</div>
-      <div class="seg" role="radiogroup" aria-label="Spiltype">${MODES.map(([k,t,d])=>`
-        <button role="radio" aria-checked="${settings.mode===k}" data-mode="${k}"><b>${t}</b><small>${d}</small></button>`).join("")}
-      </div>
-    </div>
-    <div class="section">
-      <div class="label">Hurtig tilføj</div>
+      <div class="label">${pty?"Hurtig tilføj gæster":"Hurtig tilføj"}</div>
       <div class="panel">
         ${settings.saved.length?`<div class="chips">${sortedSaved().map(n=>{const on=hasPlayer(n);return `
           <span class="qa ${on?"on":""}"><label class="qa-name"><input type="checkbox" data-qa="${esc(n)}" ${on?"checked":""}><span>${esc(n)}</span></label><button class="qa-x" data-forget="${esc(n)}" aria-label="Glem ${esc(n)}">×</button></span>`}).join("")}</div>
-        <small class="hint-text">Sæt flueben for at tilføje en spiller. Tryk × for at glemme et navn.</small>`
+        <small class="hint-text">Sæt flueben for at tilføje en ${pty?"gæst":"spiller"}. Tryk × for at glemme et navn.</small>`
         :`<small class="hint-text">Navne bliver gemt her, når I har spillet en runde, så I hurtigt kan sætte flueben næste gang.</small>`}
       </div>
     </div>
     <div class="section">
-      <div class="label">Spillere · ${names.length}</div>
+      <div class="label" id="pcount">Spillere · ${total}</div>
       <div class="panel">
+        ${pty?`
+        <div class="player"><span class="num tag">Dig</span><input type="text" id="hostName" value="${esc(settings.hostName)}" maxlength="20" placeholder="Dit navn" aria-label="Dit navn"></div>
+        <div class="sub-label">På egne telefoner</div>
+        <div class="remotes" id="remotes">${remotesHTML()}</div>
+        <div class="sub-label">Gæster på din telefon</div>`:""}
         <div class="players">${names.map((n,i)=>`
-          <div class="player"><span class="num">${i+1}</span>
-            <input type="text" id="p${i}" value="${esc(n)}" maxlength="20" aria-label="Spiller ${i+1}" data-i="${i}">
+          <div class="player"><span class="num">${pty?"":i+1}</span>
+            <input type="text" id="p${i}" value="${esc(n)}" maxlength="20" aria-label="${pty?"Gæst":"Spiller"} ${i+1}" data-i="${i}">
             <button class="icon-btn" data-del="${i}" aria-label="Fjern ${esc(n)}">×</button></div>`).join("")}
         </div>
-        <button class="btn ghost small" id="add" ${names.length>=20?"disabled":""}>+ Tilføj spiller</button>
+        ${pty&&!names.length?`<small class="hint-text">Gæster er spillere uden appen. De ser deres kort og skriver svar på din telefon.</small>`:""}
+        <button class="btn ghost small" id="add" ${names.length>=20?"disabled":""}>+ Tilføj ${pty?"gæst":"spiller"}</button>
       </div>
     </div>
     <div class="section">
       <div class="label">Regler</div>
       <div class="panel">
-        <div class="stepper"><div class="row-text"><b>Imposters</b><small>Max ${maxImp(names.length)} med ${names.length} spillere</small></div>
-          <div class="ctrl"><button class="icon-btn" id="impMinus" aria-label="Færre imposters">−</button><output>${settings.imposters}</output><button class="icon-btn" id="impPlus" aria-label="Flere imposters">+</button></div></div>
+        <div class="stepper"><div class="row-text"><b>Imposters</b><small id="impInfo">Max ${maxImp(total)} med ${total} spillere</small></div>
+          <div class="ctrl"><button class="icon-btn" id="impMinus" aria-label="Færre imposters">−</button><output id="impOut">${settings.imposters}</output><button class="icon-btn" id="impPlus" aria-label="Flere imposters">+</button></div></div>
         ${spg
-          ?`<label class="toggle" for="inapp"><span class="row-text"><b>Skriv svar i appen</b><small>${settings.inApp?"Svarene vises samlet, når alle har svaret":"Hver spiller skriver selv sit svar ned, fx i Noter"}</small></span>
+          ? pty
+            ?`<div class="row-text"><b>Svar</b><small>Alle skriver deres svar på egen telefon. Gæster skriver på din.</small></div>`
+            :`<label class="toggle" for="inapp"><span class="row-text"><b>Skriv svar i appen</b><small>${settings.inApp?"Svarene vises samlet, når alle har svaret":"Hver spiller skriver selv sit svar ned, fx i Noter"}</small></span>
               <input type="checkbox" class="switch" id="inapp" ${settings.inApp?"checked":""}></label>`
           :`<label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
               <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>`}
@@ -320,46 +390,175 @@ function renderSetup(err){
     ${err?`<p class="error">${esc(err)}</p>`:""}
     <button class="btn primary" id="start">Start spillet</button>
     <ul class="rules">${spg?`
-      <li>Send telefonen rundt. Alle får et spørgsmål og svarer på det${settings.inApp?" i appen":" på et stykke papir eller i Noter"}.</li>
+      <li>${pty?"Alle får et spørgsmål på deres egen telefon og skriver et svar.":`Send telefonen rundt. Alle får et spørgsmål og svarer på det${settings.inApp?" i appen":" på et stykke papir eller i Noter"}.`}</li>
       <li>Imposteren får et lidt andet spørgsmål, men ved ikke selv, at de er imposter.</li>
       <li>Læs svarene højt, afslør det rigtige spørgsmål, og stem om, hvem der har svaret på noget andet.</li>`:`
-      <li>Send telefonen rundt. Alle ser det hemmelige ord, undtagen imposteren.</li>
+      <li>${pty?"Alle ser deres kort på deres egen telefon.":"Send telefonen rundt."} Alle ser det hemmelige ord, undtagen imposteren.</li>
       <li>Skiftes til at sige ét ord, der passer til det hemmelige ord.</li>
       <li>Stem om, hvem der er imposteren. Bliver imposteren fanget, kan de stadig vinde ved at gætte ordet.</li>`}
     </ul>`;
 
+  app.querySelector("#toJoin").onclick=()=>{joinView={code:"",err:""};render()};
+  app.querySelectorAll("[data-play]").forEach(b=>b.onclick=()=>{settings.play=b.dataset.play;save();if(!isParty())stopHosting();renderSetup()});
   app.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{settings.mode=b.dataset.mode;save();renderSetup()});
+  const hn=app.querySelector("#hostName");
+  if(hn) hn.addEventListener("input",()=>{settings.hostName=hn.value;save()});
   app.querySelectorAll("input[data-i]").forEach(inp=>{
-    inp.addEventListener("input",()=>{settings.players[+inp.dataset.i]=inp.value;save()});
+    inp.addEventListener("input",()=>{L()[+inp.dataset.i]=inp.value;save()});
     inp.addEventListener("change",()=>{remember([inp.value]);renderSetup()});
   });
   app.querySelectorAll("[data-qa]").forEach(cb=>cb.onchange=()=>{
-    const n=cb.dataset.qa;
-    if(cb.checked){const empty=settings.players.findIndex(p=>!p.trim());if(empty>=0)settings.players[empty]=n;else if(settings.players.length<20)settings.players.push(n)}
-    else settings.players=settings.players.filter(p=>p.trim().toLowerCase()!==n.toLowerCase());
+    const n=cb.dataset.qa, list=L();
+    if(cb.checked){const empty=list.findIndex(p=>!p.trim());if(empty>=0)list[empty]=n;else if(list.length<20)list.push(n)}
+    else settings[listKey()]=list.filter(p=>p.trim().toLowerCase()!==n.toLowerCase());
     save();renderSetup();
   });
   app.querySelectorAll("[data-forget]").forEach(b=>b.onclick=()=>{settings.saved=settings.saved.filter(x=>x!==b.dataset.forget);save();renderSetup()});
-  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{settings.players.splice(+b.dataset.del,1);save();renderSetup()});
-  app.querySelector("#add").onclick=()=>{settings.players.push("");save();renderSetup();const l=app.querySelector(`#p${settings.players.length-1}`);l&&l.focus()};
-  const step=(id,key,d,min,max)=>app.querySelector(id).onclick=()=>{settings[key]=Math.min(max,Math.max(min,settings[key]+d));save();renderSetup()};
-  step("#impMinus","imposters",-1,1,maxImp(names.length)); step("#impPlus","imposters",1,1,maxImp(names.length));
+  app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{L().splice(+b.dataset.del,1);save();renderSetup()});
+  app.querySelector("#add").onclick=()=>{L().push("");save();renderSetup();const l=app.querySelector(`#p${L().length-1}`);l&&l.focus()};
+  const step=(id,d)=>app.querySelector(id).onclick=()=>{settings.imposters=Math.min(maxImp(totalPlayers()),Math.max(1,settings.imposters+d));save();renderSetup()};
+  step("#impMinus",-1); step("#impPlus",1);
   const hint=app.querySelector("#hint"); if(hint) hint.onchange=e=>{settings.hint=e.target.checked;save()};
   const inapp=app.querySelector("#inapp"); if(inapp) inapp.onchange=e=>{settings.inApp=e.target.checked;save();renderSetup()};
   app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{const k=b.dataset.cat;settings.off=settings.off.includes(k)?settings.off.filter(c=>c!==k):[...settings.off,k];save();b.setAttribute("aria-pressed",!settings.off.includes(k))});
   app.querySelector("#start").onclick=startGame;
+  bindPartyPanel(); bindRemotes();
 }
 
+/* Party-panelet og listen over telefoner opdateres for sig, så man ikke mister fokus i et tekstfelt */
+const partyLink = () => location.origin + location.pathname + "?party=" + party.code;
+function partyPanelHTML(){
+  if(!party || party.status==="connecting") return `<div class="party-status"><span class="spinner" aria-hidden="true"></span>Opretter party …</div>`;
+  if(party.status==="error") return `<p class="error">${esc(party.err)}</p><button class="btn ghost small" id="retry">Prøv igen</button>`;
+  return `<div class="code-row">
+      <div class="row-text"><small class="hint-text">Party-kode</small><div class="code">${esc(party.code)}</div>
+        <small class="hint-text">Scan QR-koden, eller åbn appen, tryk "Deltag i party" og skriv koden.</small></div>
+      <div class="qr" id="qr" aria-label="QR-kode til partyet"></div></div>
+    <div class="link-row"><input type="text" readonly id="plink" value="${esc(partyLink())}" aria-label="Link til partyet"><button class="btn ghost small" id="copy">Kopiér link</button></div>`;
+}
+function bindPartyPanel(){
+  const r=app.querySelector("#retry"); if(r) r.onclick=()=>{party.status="connecting";refreshLobby();startHosting()};
+  const c=app.querySelector("#copy"), inp=app.querySelector("#plink");
+  if(c) c.onclick=()=>{navigator.clipboard?.writeText(inp.value).then(()=>{c.textContent="Kopieret"},()=>{inp.select()}) ?? inp.select()};
+  const q=app.querySelector("#qr");
+  if(q) loadScript(QR_URL).then(()=>{if(!q.isConnected||q.dataset.done)return;const qr=qrcode(0,"M");qr.addData(partyLink());qr.make();q.innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true});q.dataset.done="1"}).catch(()=>{});
+}
+function remotesHTML(){
+  const list=remoteList();
+  if(!list.length) return `<small class="hint-text">Ingen endnu. Del koden ovenfor.</small>`;
+  return list.map(r=>`<div class="remote"><span class="dot ${r.connected?"on":""}" aria-hidden="true"></span>
+    <span class="rname">${esc(r.name)}</span><small class="hint-text">${r.connected?"Forbundet":"Afbrudt"}</small>
+    <button class="icon-btn" data-kick="${esc(r.id)}" aria-label="Fjern ${esc(r.name)}">×</button></div>`).join("");
+}
+function bindRemotes(){
+  app.querySelectorAll("[data-kick]").forEach(b=>b.onclick=()=>{const r=party&&party.remotes.get(b.dataset.kick);if(!r)return;
+    send(r,{t:"kicked"});setTimeout(()=>{try{r.conn&&r.conn.close()}catch(e){}},300);party.remotes.delete(r.id);refreshLobby();broadcast()});
+}
+function refreshLobby(){
+  if(remote||joinView||game||!isParty()) return;
+  const a=document.activeElement;
+  if(a&&a.matches&&a.matches("input[type=text]")&&app.contains(a)){
+    const pp=app.querySelector("#partyPanel"); if(pp){pp.innerHTML=partyPanelHTML();bindPartyPanel()}
+    const rl=app.querySelector("#remotes"); if(rl){rl.innerHTML=remotesHTML();bindRemotes()}
+    const t=totalPlayers(); app.querySelector("#pcount").textContent=`Spillere · ${t}`;
+    app.querySelector("#impInfo").textContent=`Max ${maxImp(t)} med ${t} spillere`;
+  } else renderSetup();
+}
+
+/* ---------- Vært: forbindelser ---------- */
+function startHosting(){
+  if(party && (party.peer || party.starting)) return;
+  party = party || {remotes:new Map(), status:"connecting", err:"", code:settings.partyCode||newCode(), tries:0};
+  party.starting = true;
+  loadScript(PEER_URL).then(()=>{
+    if(!party) return;
+    const peer = new Peer(peerId(party.code), peerOpts());
+    party.peer = peer; party.starting = false;
+    peer.on("open",()=>{if(party?.peer!==peer)return;party.status="ready";party.tries=0;settings.partyCode=party.code;save();keepAwake();refreshLobby()});
+    peer.on("connection",conn=>hostConn(conn));
+    peer.on("disconnected",()=>{setTimeout(()=>{if(party?.peer===peer&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},1500)});
+    peer.on("error",err=>{
+      if(party?.peer!==peer) return;
+      if(err.type==="peer-unavailable") return;
+      peer.destroy(); party.peer=null;
+      if(err.type==="unavailable-id"){ if(++party.tries>3){party.code=newCode();party.tries=0} setTimeout(startHosting,2500); return }
+      party.status="error"; party.err="Kunne ikke oprette forbindelse til party-serveren. Tjek internettet og prøv igen.";
+      refreshLobby(); setTimeout(()=>{if(party&&!party.peer&&!party.starting)startHosting()},5000);
+    });
+  }).catch(()=>{if(!party)return;party.starting=false;party.status="error";party.err="Party kræver internet første gang. Tjek forbindelsen og prøv igen.";refreshLobby()});
+}
+function stopHosting(){
+  if(!party) return;
+  for(const r of party.remotes.values()){send(r,{t:"kicked",ended:true});try{r.conn&&r.conn.close()}catch(e){}}
+  try{party.peer&&party.peer.destroy()}catch(e){}
+  party=null; wakeLock?.release?.();
+}
+function uniqueName(name,id){
+  const taken=new Set([settings.hostName,...settings.guests,...remoteList().filter(r=>r.id!==id).map(r=>r.name)].map(n=>String(n).trim().toLowerCase()));
+  let n=name,i=2; while(taken.has(n.toLowerCase())) n=`${name} ${i++}`; return n;
+}
+function hostConn(conn){
+  conn.on("data",msg=>{
+    if(!party||!msg||typeof msg!=="object") return;
+    if(msg.t==="hello"){
+      const id=String(msg.id||"").slice(0,40); if(!id) return;
+      let r=party.remotes.get(id);
+      if(!r){r={id,name:uniqueName(String(msg.name||"").trim().slice(0,20)||"Spiller",id)};party.remotes.set(id,r)}
+      else if(r.conn&&r.conn!==conn){try{r.conn.close()}catch(e){}}
+      r.conn=conn; r.connected=true; conn._rid=id;
+      syncRemote(r); onPartyChange();
+    } else if(conn._rid){ const r=party.remotes.get(conn._rid); if(r&&r.conn===conn) handleRemoteMsg(r,msg) }
+  });
+  conn.on("close",()=>{const r=conn._rid&&party&&party.remotes.get(conn._rid);if(r&&r.conn===conn){r.connected=false;r.conn=null;onPartyChange()}});
+  conn.on("error",()=>{});
+}
+function send(r,msg){if(r&&r.conn&&r.conn.open){try{r.conn.send(msg)}catch(e){}}}
+function onPartyChange(){
+  if(!game){refreshLobby();broadcast();return}
+  if(game.phase==="waiting") render(); else broadcast();
+}
+const gameIdx = r => game&&game.party ? game.players.findIndex(p=>p.rid===r.id) : -1;
+function syncRemote(r){
+  const idx=gameIdx(r);
+  if(idx<0){send(r,{t:"lobby",name:r.name,players:lobbyNames(),inGame:!!game});return}
+  send(r,{t:"round",round:game.id,name:r.name,card:cardFor(idx),done:!!game.done[idx]});
+  send(r,{t:"pub",pub:pubState()});
+}
+function broadcast(){if(party) for(const r of party.remotes.values()) syncRemote(r)}
+const lobbyNames = () => [settings.hostName.trim()||"Værten",...remoteList().filter(r=>r.connected).map(r=>r.name),...settings.guests.map(g=>g.trim()).filter(Boolean)];
+function handleRemoteMsg(r,msg){
+  const idx=gameIdx(r);
+  if(idx<0||msg.round!==game.id||game.done[idx]) return;
+  if(msg.t==="answer"&&game.mode==="spg"){game.answers[idx]=String(msg.text||"").trim().slice(0,80)||"–";game.done[idx]=true}
+  else if(msg.t==="ready"&&game.mode==="ord"){game.done[idx]=true}
+  else return;
+  if(game.phase==="waiting"&&game.done.every(Boolean)) game.phase="discuss";
+  if(game.phase==="waiting"||game.phase==="discuss") render(); else broadcast();
+}
+
+/* ---------- Ny runde ---------- */
 function startGame(){
-  remember(settings.players);
-  const players = settings.players.map((n,i)=>n.trim()||`Spiller ${i+1}`);
-  if(players.length<3) return renderSetup("I skal være mindst 3 spillere.");
-  if(new Set(players.map(p=>p.toLowerCase())).size!==players.length) return renderSetup("To spillere har samme navn. Giv dem forskellige navne.");
+  let players;
+  if(isParty()){
+    const host=settings.hostName.trim();
+    if(!host) return renderSetup("Skriv dit eget navn under Spillere.");
+    remember(settings.guests);
+    players=[{name:host,kind:"host"},
+      ...remoteList().filter(r=>r.connected).map(r=>({name:r.name,kind:"remote",rid:r.id})),
+      ...settings.guests.map((n,i)=>({name:n.trim()||`Gæst ${i+1}`,kind:"guest"}))];
+  } else {
+    remember(settings.players);
+    players=settings.players.map((n,i)=>({name:n.trim()||`Spiller ${i+1}`,kind:"local"}));
+  }
+  if(players.length<3) return renderSetup(isParty()?"I skal være mindst 3 spillere. Vent på at flere tilslutter sig, eller tilføj gæster.":"I skal være mindst 3 spillere.");
+  if(new Set(players.map(p=>p.name.toLowerCase())).size!==players.length) return renderSetup("To spillere har samme navn. Giv dem forskellige navne.");
   const imps = shuffle(players.map((_,i)=>i)).slice(0,Math.min(settings.imposters,maxImp(players.length)));
-  const base = {players,imps,turn:0,phase:"handoff",starter:pick(players),confirmEnd:false};
+  const local = players.map((p,i)=>p.kind==="remote"?-1:i).filter(i=>i>=0);
+  const base = {id:Date.now().toString(36),party:isParty(),players,imps,local,pos:0,phase:"handoff",starter:pick(players).name,
+                confirmEnd:false,done:players.map(()=>false)};
   if(settings.mode==="spg"){
     const [real,fake] = SPORGSMAAL[+pickFresh(SPORGSMAAL.map((_,i)=>String(i)),"spg")];
-    game = {...base,mode:"spg",real,fake,inApp:settings.inApp,answers:players.map(()=>""),qShown:false};
+    game = {...base,mode:"spg",real,fake,inApp:isParty()||settings.inApp,answers:players.map(()=>""),qShown:false};
   } else {
     const cats = Object.keys(KATEGORIER).filter(k=>!settings.off.includes(k));
     if(!cats.length) return renderSetup("Vælg mindst én kategori.");
@@ -369,64 +568,97 @@ function startGame(){
   }
   render();
 }
-
-/* ---------- Send rundt ---------- */
-const progress = () => `<div class="progress" aria-label="Spiller ${game.turn+1} af ${game.players.length}">${game.players.map((_,i)=>`<i class="${i<game.turn?"done":""}"></i>`).join("")}</div>`;
-const isLast = () => game.turn===game.players.length-1;
-function advance(){
-  if(isLast()) game.phase="discuss";
-  else {game.turn++;game.phase="handoff"}
-  render();
+function cardFor(idx){
+  const imp=game.imps.includes(idx), n=game.imps.length;
+  if(game.mode==="spg") return {kind:"q",q:imp?game.fake:game.real};
+  return imp?{kind:"spy",hint:game.hintOn?game.hint:"",n}:{kind:"word",word:game.word,cat:game.cat,n};
+}
+function pubState(){
+  const phase = ["handoff","reveal","waiting"].includes(game.phase) ? "waiting" : game.phase;
+  const pub = {mode:game.mode,phase,players:game.players.map((p,i)=>({name:p.name,done:!!game.done[i]}))};
+  if(phase==="discuss"||phase==="result"){
+    pub.starter=game.starter; pub.inApp=game.inApp;
+    if(game.mode==="spg"){pub.answers=game.answers;pub.qShown=game.qShown||phase==="result";if(pub.qShown)pub.real=game.real}
+  }
+  if(phase==="result"){
+    pub.imps=game.imps;
+    if(game.mode==="spg") pub.fake=game.fake; else {pub.word=game.word;pub.cat=game.cat}
+  }
+  return pub;
 }
 
+/* ---------- Send rundt (telefonen der holdes i hånden) ---------- */
+const cur = () => game.local[game.pos];
+const progress = () => game.local.length<2 ? "" : `<div class="progress" aria-label="${game.pos+1} af ${game.local.length}">${game.local.map((_,i)=>`<i class="${i<game.pos?"done":""}"></i>`).join("")}</div>`;
+const isLast = () => game.pos===game.local.length-1;
+function advance(){
+  game.done[cur()]=true;
+  if(isLast()) game.phase = game.done.every(Boolean) ? "discuss" : "waiting";
+  else {game.pos++;game.phase="handoff"}
+  render();
+}
+const peekCard = (label) => `<button class="card cover" id="peek">
+      <div class="eye" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <b>${label}</b>
+      <span style="color:var(--muted);font-size:.9rem">Sørg for at ingen andre kigger med</span>
+    </button>`;
+
 function renderHandoff(){
+  const p = game.players[cur()];
   app.innerHTML = `<div class="stage handoff">
     ${progress()}
-    <div class="label">Giv telefonen til</div>
-    <div class="big">${esc(game.players[game.turn])}</div>
-    <button class="card cover" id="peek">
-      <div class="eye" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
-      <b>${game.mode==="spg"?"Tryk for at se dit spørgsmål":"Tryk for at se din rolle"}</b>
-      <span style="color:var(--muted);font-size:.9rem">Sørg for at ingen andre kigger med</span>
-    </button>
+    <div class="label">${p.kind==="host"?"Dit kort":"Giv telefonen til"}</div>
+    <div class="big">${esc(p.name)}</div>
+    ${peekCard(game.mode==="spg"?"Tryk for at se dit spørgsmål":"Tryk for at se din rolle")}
     ${quitBtn()}
   </div>`;
   app.querySelector("#peek").onclick=()=>{game.phase="reveal";render()};
   bindQuit();
 }
 
-function renderReveal(){
-  if(game.mode==="spg") return renderQuestion();
-  const isImp = game.imps.includes(game.turn);
-  const others = game.imps.length>1 ? `<span class="note">Der er ${game.imps.length} imposters i spillet.</span>` : "";
-  const card = isImp
-    ? `<div class="card spy"><span class="kicker">Du er</span><span class="secret">Imposteren</span>
-        ${game.hintOn?`<span class="note">Dit stikord: <b>${esc(game.hint)}</b></span>`:""}
-        <span class="note">Lad som om du kender ordet.</span>${others}</div>`
-    : `<div class="card word"><span class="kicker">${esc(game.cat)}</span><span class="secret">${esc(game.word)}</span>
+function cardHTML(c){
+  const others = c.n>1 ? `<span class="note">Der er ${c.n} imposters i spillet.</span>` : "";
+  if(c.kind==="q") return `<div class="card word q"><span class="kicker">Dit spørgsmål</span><span class="secret">${esc(c.q)}</span>${c.note||""}</div>`;
+  if(c.kind==="spy") return `<div class="card spy"><span class="kicker">Du er</span><span class="secret">Imposteren</span>
+        ${c.hint?`<span class="note">Dit stikord: <b>${esc(c.hint)}</b></span>`:""}
+        <span class="note">Lad som om du kender ordet.</span>${others}</div>`;
+  return `<div class="card word"><span class="kicker">${esc(c.cat)}</span><span class="secret">${esc(c.word)}</span>
         <span class="note">Find den, der ikke kender ordet.</span>${others}</div>`;
-  app.innerHTML = `<div class="stage">${progress()}<div class="label">${esc(game.players[game.turn])}</div>${card}
-    <button class="btn primary" id="next">${isLast()?"Skjul og start diskussionen":"Skjul og giv videre"}</button></div>`;
-  app.querySelector("#next").onclick=advance;
 }
+const answerField = () => `<label class="answer" for="ans"><span class="label">Dit svar</span>
+      <input type="text" id="ans" maxlength="80" autocomplete="off" placeholder="Skriv dit svar her"></label>`;
 
-function renderQuestion(){
-  const q = game.imps.includes(game.turn) ? game.fake : game.real;
-  const label = isLast()
-    ? (game.inApp?"Gem svar og se svarene":"Skjul og læs svarene op")
-    : (game.inApp?"Gem svar og giv videre":"Skjul og giv videre");
-  app.innerHTML = `<div class="stage">${progress()}<div class="label">${esc(game.players[game.turn])}</div>
-    <div class="card word q"><span class="kicker">Dit spørgsmål</span><span class="secret">${esc(q)}</span>
-      ${game.inApp?"":`<span class="note">Skriv dit svar ned, fx i Noter. Vis det ikke til nogen endnu.</span>`}</div>
-    ${game.inApp?`<label class="answer" for="ans"><span class="label">Dit svar</span>
-      <input type="text" id="ans" maxlength="80" autocomplete="off" placeholder="Skriv dit svar her"></label>`:""}
-    <button class="btn primary" id="next" ${game.inApp?"disabled":""}>${label}</button></div>`;
+function renderReveal(){
+  const idx = cur(), c = cardFor(idx), spg = game.mode==="spg";
+  const toWait = isLast() && game.party && !game.done.every((d,i)=>d||i===idx);
+  let label;
+  if(spg && game.inApp) label = !isLast()?"Gem svar og giv videre":toWait?"Gem svar":"Gem svar og se svarene";
+  else if(spg) label = isLast()?"Skjul og læs svarene op":"Skjul og giv videre";
+  else label = isLast()?(toWait?"Skjul kortet":"Skjul og start diskussionen"):"Skjul og giv videre";
+  if(spg && !game.inApp) c.note=`<span class="note">Skriv dit svar ned, fx i Noter. Vis det ikke til nogen endnu.</span>`;
+  app.innerHTML = `<div class="stage">${progress()}<div class="label">${esc(game.players[idx].name)}</div>${cardHTML(c)}
+    ${spg&&game.inApp?answerField():""}
+    <button class="btn primary" id="next" ${spg&&game.inApp?"disabled":""}>${label}</button></div>`;
   const next = app.querySelector("#next"), ans = app.querySelector("#ans");
   if(ans){
     ans.oninput=()=>{next.disabled=!ans.value.trim()};
     ans.onkeydown=e=>{if(e.key==="Enter"&&ans.value.trim())next.click()};
   }
-  next.onclick=()=>{if(ans)game.answers[game.turn]=ans.value.trim();advance()};
+  next.onclick=()=>{if(ans)game.answers[idx]=ans.value.trim();advance()};
+}
+
+const statusList = players => `<div class="status-list">${players.map(p=>`<div class="srow ${p.done?"ok":""}"><span>${esc(p.name)}</span><span class="badge">${p.done?"Klar":"Venter"}</span></div>`).join("")}</div>`;
+function renderWaiting(){
+  const left = game.done.filter(d=>!d).length;
+  app.innerHTML = `<div class="stage">
+    <div class="label">Venter på ${left} ${left===1?"spiller":"spillere"}</div>
+    <h2 class="wait-h">${game.mode==="spg"?"De andre skriver deres svar":"De andre kigger på deres kort"}</h2>
+    ${statusList(game.players.map((p,i)=>({name:p.name,done:game.done[i]})))}
+    <button class="btn ghost" id="skip">Fortsæt uden at vente</button>
+    ${quitBtn()}
+  </div>`;
+  app.querySelector("#skip").onclick=()=>{game.phase="discuss";render()};
+  bindQuit();
 }
 
 /* ---------- Diskussion ---------- */
@@ -437,6 +669,9 @@ function bindConfirm(){
   app.querySelector("#no").onclick=()=>{game.confirmEnd=false;app.querySelector("#confirm").hidden=true};
   app.querySelector("#yes").onclick=()=>{game.phase="result";render()};
 }
+const answersHTML = (names,answers,imps) => `<div class="answers">${names.map((n,i)=>{const imp=imps&&imps.includes(i);return `
+  <div class="ans ${imp?"imp":""}"><span class="who-s">${esc(n)}${imp?" · imposter":""}</span><span class="a">${esc(answers[i]||"–")}</span></div>`}).join("")}</div>`;
+const pnames = () => game.players.map(p=>p.name);
 
 function renderDiscuss(){
   if(game.mode==="spg") return renderAnswers();
@@ -450,11 +685,8 @@ function renderDiscuss(){
   bindConfirm(); bindQuit();
 }
 
-const answersList = mark => `<div class="answers">${game.players.map((p,i)=>{const imp=mark&&game.imps.includes(i);return `
-  <div class="ans ${imp?"imp":""}"><span class="who-s">${esc(p)}${imp?" · imposter":""}</span><span class="a">${esc(game.answers[i])}</span></div>`}).join("")}</div>`;
-
 function renderAnswers(){
-  const answers = game.inApp ? answersList(false)
+  const answers = game.inApp ? answersHTML(pnames(),game.answers)
     : `<div class="starter"><b>${esc(game.starter)}</b> starter. Læs jeres svar højt én ad gangen.</div>`;
   app.innerHTML = `<div class="stage">
     ${game.qShown?`
@@ -475,26 +707,185 @@ function renderAnswers(){
 }
 
 /* ---------- Resultat ---------- */
+function resultHTML(mode,names,imps,d){
+  const impNames = imps.map(i=>names[i]);
+  const reveal = mode==="spg"
+    ? `<div class="card spy q compact"><span class="kicker">${impNames.length>1?"Imposternes":"Imposterens"} spørgsmål</span><span class="secret">${esc(d.fake)}</span></div>
+       <div class="card word q compact"><span class="kicker">Det rigtige spørgsmål</span><span class="secret">${esc(d.real)}</span></div>
+       ${d.inApp?answersHTML(names,d.answers,imps):""}`
+    : `<div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord</span><span class="secret">${esc(d.word)}</span><span class="note">${esc(d.cat)}</span></div>`;
+  return `<div class="label">${impNames.length>1?"Imposterne var":"Imposteren var"}</div>
+    <div class="reveal-list">${impNames.map(n=>`<div class="who">${esc(n)}</div>`).join("")}</div>${reveal}`;
+}
 function renderResult(){
-  const names = game.imps.map(i=>game.players[i]);
-  const reveal = game.mode==="spg"
-    ? `<div class="card spy q compact"><span class="kicker">${names.length>1?"Imposternes":"Imposterens"} spørgsmål</span><span class="secret">${esc(game.fake)}</span></div>
-       <div class="card word q compact"><span class="kicker">Det rigtige spørgsmål</span><span class="secret">${esc(game.real)}</span></div>
-       ${game.inApp?answersList(true):""}`
-    : `<div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord</span><span class="secret">${esc(game.word)}</span><span class="note">${esc(game.cat)}</span></div>`;
-  app.innerHTML = `<div class="stage">
-    <div class="label">${names.length>1?"Imposterne var":"Imposteren var"}</div>
-    <div class="reveal-list">${names.map(n=>`<div class="who">${esc(n)}</div>`).join("")}</div>
-    ${reveal}
+  app.innerHTML = `<div class="stage">${resultHTML(game.mode,pnames(),game.imps,game)}
     <div class="btn-row"><button class="btn ghost" id="setup">Ret spillere</button><button class="btn primary" id="again">Spil igen</button></div>
   </div>`;
   app.querySelector("#again").onclick=startGame;
   app.querySelector("#setup").onclick=()=>{game=null;render()};
 }
 
+/* ---------- Deltag i en andens party ---------- */
+function renderJoin(){
+  app.innerHTML = `
+    <header class="brand"><div class="flag" aria-hidden="true"></div><h1>Hvem er <span>Imposteren?</span></h1></header>
+    <div class="stage">
+      <h2 class="wait-h">Deltag i party</h2>
+      <div class="panel join">
+        <label class="answer" for="jname"><span class="label">Dit navn</span>
+          <input type="text" id="jname" maxlength="20" autocomplete="off" value="${esc(settings.myName)}" placeholder="Fx Freja"></label>
+        <label class="answer" for="jcode"><span class="label">Party-kode</span>
+          <input type="text" id="jcode" class="code-input" maxlength="4" autocomplete="off" autocapitalize="characters" value="${esc(joinView.code)}" placeholder="ABCD"></label>
+        ${joinView.err?`<p class="error">${esc(joinView.err)}</p>`:""}
+        <button class="btn primary" id="join">Deltag</button>
+      </div>
+      <button class="btn ghost small" id="back" style="align-self:center">Tilbage</button>
+    </div>`;
+  const nm=app.querySelector("#jname"), cd=app.querySelector("#jcode");
+  cd.oninput=()=>{cd.value=cd.value.toUpperCase().replace(/[^A-Z0-9]/g,"");joinView.code=cd.value};
+  nm.oninput=()=>{settings.myName=nm.value;save()};
+  const go=()=>{
+    const name=nm.value.trim(), code=cd.value.trim().toUpperCase();
+    if(!name){joinView.err="Skriv dit navn.";return renderJoin()}
+    if(code.length!==4){joinView.err="Party-koden har 4 tegn. Du finder den på værtens telefon.";return renderJoin()}
+    settings.myName=name; save(); joinView=null;
+    remote={code,name,status:"connecting",lobby:null,card:null,pub:null,round:null,done:false,revealed:false,draft:""};
+    connectRemote(); render();
+  };
+  app.querySelector("#join").onclick=go;
+  cd.onkeydown=e=>{if(e.key==="Enter")go()};
+  app.querySelector("#back").onclick=()=>{joinView=null;clearUrl();render()};
+  if(!nm.value) nm.focus(); else if(!cd.value) cd.focus();
+}
+function clearUrl(){try{history.replaceState(null,"",location.pathname)}catch(e){}}
+
+function connectRemote(){
+  const me=remote; if(!me) return;
+  loadScript(PEER_URL).then(()=>{
+    if(remote!==me) return;
+    if(!me.peer||me.peer.destroyed){
+      const peer=new Peer(peerOpts()); me.peer=peer;
+      peer.on("open",()=>{if(remote===me)openConn(me)});
+      peer.on("disconnected",()=>{setTimeout(()=>{if(remote===me&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},1500)});
+      peer.on("error",err=>{
+        if(remote!==me) return;
+        if(err.type==="peer-unavailable"){me.status="notfound"}
+        else {me.status="offline";try{peer.destroy()}catch(e){};me.peer=null}
+        renderRemote(); retryLater(me);
+      });
+    } else if(me.peer.open) openConn(me);
+  }).catch(()=>{if(remote!==me)return;me.status="offline";renderRemote();retryLater(me)});
+}
+function openConn(me){
+  const conn=me.peer.connect(peerId(me.code),{reliable:true});
+  me.conn=conn;
+  conn.on("open",()=>{if(remote!==me||me.conn!==conn)return;me.status="connected";conn.send({t:"hello",id:settings.clientId,name:me.name});keepAwake();renderRemote()});
+  conn.on("data",msg=>{if(remote===me&&me.conn===conn)onHostMsg(msg)});
+  conn.on("close",()=>{if(remote===me&&me.conn===conn&&!me.kicked){me.status="reconnecting";me.conn=null;renderRemote();retryLater(me)}});
+  conn.on("error",()=>{});
+  setTimeout(()=>{if(remote===me&&me.conn===conn&&!conn.open){try{conn.close()}catch(e){};me.conn=null;if(me.status==="connecting"||me.status==="reconnecting")me.status="notfound";renderRemote();retryLater(me)}},8000);
+}
+function retryLater(me){
+  if(me.retryT||me.kicked) return;
+  me.retryT=setTimeout(()=>{me.retryT=null;if(remote===me&&me.status!=="connected")connectRemote()},3000);
+}
+function onHostMsg(msg){
+  if(!msg||typeof msg!=="object") return;
+  const me=remote;
+  if(msg.t==="lobby"){me.lobby=msg;me.round=null;me.card=null;me.pub=null;me.name=msg.name||me.name}
+  else if(msg.t==="round"){
+    if(msg.round!==me.round){me.round=msg.round;me.revealed=false;me.draft="";me.viewCard=false}
+    me.card=msg.card; me.done=msg.done; me.name=msg.name||me.name;
+  }
+  else if(msg.t==="pub"){me.pub=msg.pub}
+  else if(msg.t==="kicked"){me.kicked=msg.ended?"ended":"kicked";try{me.peer&&me.peer.destroy()}catch(e){}}
+  renderRemote();
+}
+function leaveParty(){
+  if(remote){clearTimeout(remote.retryT);try{remote.peer&&remote.peer.destroy()}catch(e){}}
+  remote=null; clearUrl(); wakeLock?.release?.(); render();
+}
+
+let lastRemoteHTML="";
+function renderRemote(){
+  const me=remote; if(!me) return;
+  const banner = me.status==="connected" ? "" : `<div class="conn-banner"><span class="spinner" aria-hidden="true"></span>${
+    me.status==="notfound"?`Kan ikke finde party ${esc(me.code)}. Tjek koden, og at værten har appen åben.`:
+    me.status==="offline"?"Ingen internetforbindelse. Prøver igen …":
+    me.status==="reconnecting"?"Forbindelsen blev afbrudt. Genopretter …":"Forbinder …"}</div>`;
+  const header = `<div class="remote-head"><span class="label">Party ${esc(me.code)} · ${esc(me.name)}</span><button class="btn ghost small" id="leave">Forlad</button></div>`;
+  let body;
+  if(me.kicked){
+    body = `<div class="stage"><h2 class="wait-h">${me.kicked==="ended"?"Værten har lukket partyet":"Du er fjernet fra partyet"}</h2>
+      <button class="btn primary" id="leave2">Tilbage til start</button></div>`;
+  } else if(me.round && me.card && me.pub && me.viewCard){
+    body = `<div class="stage">${cardHTML(me.card)}<button class="btn primary" id="hideCard">Skjul kortet</button></div>`;
+  } else if(me.round && me.card && me.pub){
+    const p=me.pub;
+    if(p.phase==="waiting" && !me.done){
+      if(!me.revealed) body = `<div class="stage">${peekCard(p.mode==="spg"?"Tryk for at se dit spørgsmål":"Tryk for at se din rolle")}</div>`;
+      else body = `<div class="stage">${cardHTML(me.card)}
+        ${p.mode==="spg"?answerField()+`<button class="btn primary" id="send" ${me.draft.trim()?"":"disabled"}>Send svar</button>`
+                        :`<button class="btn primary" id="ready">Jeg har set mit kort</button>`}</div>`;
+    } else if(p.phase==="waiting"){
+      const left=p.players.filter(x=>!x.done).length;
+      body = `<div class="stage"><div class="label">${left?`Venter på ${left} ${left===1?"spiller":"spillere"}`:"Alle er klar"}</div>
+        <h2 class="wait-h">${p.mode==="spg"?"Dit svar er sendt":"Du er klar"}</h2>${statusList(p.players)}
+        ${p.mode==="ord"?`<button class="btn ghost small" id="again-card" style="align-self:center">Se mit kort igen</button>`:""}</div>`;
+    } else if(p.phase==="discuss"){
+      const names=p.players.map(x=>x.name);
+      body = p.mode==="spg"
+        ? `<div class="stage">${p.qShown?`<div class="card word q compact"><span class="kicker">Det rigtige spørgsmål</span><span class="secret">${esc(p.real)}</span></div>`:`<div class="label">Svarene</div>`}
+            ${answersHTML(names,p.answers)}
+            <p class="sub">${p.qShown?"Hvem har svaret på et andet spørgsmål? Diskutér og stem.":"Værten afslører snart det rigtige spørgsmål."}</p></div>`
+        : `<div class="stage"><div class="label">Diskutér og stem</div>
+            <div class="starter"><b>${esc(p.starter)}</b> starter. Gå på omgang og sig ét ord hver, der passer til det hemmelige ord.</div>
+            <button class="btn ghost small" id="again-card" style="align-self:center">Se mit kort igen</button></div>`;
+    } else {
+      body = `<div class="stage">${resultHTML(p.mode,p.players.map(x=>x.name),p.imps,p)}<p class="sub">Venter på at værten starter næste runde.</p></div>`;
+    }
+  } else if(me.lobby){
+    body = `<div class="stage"><h2 class="wait-h">Du er med!</h2>
+      <p class="sub">${me.lobby.inGame?"Runden er allerede i gang. Du kommer med i næste runde.":"Venter på at værten starter spillet."}</p>
+      <div class="status-list">${me.lobby.players.map(n=>`<div class="srow ok"><span>${esc(n)}</span></div>`).join("")}</div></div>`;
+  } else {
+    body = `<div class="stage"><h2 class="wait-h">Forbinder til party ${esc(me.code)} …</h2></div>`;
+  }
+  const html = header + banner + body;
+  if(html===lastRemoteHTML && app.querySelector("#leave")) return;
+  lastRemoteHTML = html;
+  app.innerHTML = html;
+  const on=(id,fn)=>{const el=app.querySelector(id);if(el)el.onclick=fn};
+  on("#leave",leaveParty); on("#leave2",leaveParty);
+  on("#peek",()=>{me.revealed=true;renderRemote()});
+  on("#again-card",()=>{me.viewCard=true;renderRemote()});
+  on("#hideCard",()=>{me.viewCard=false;renderRemote()});
+  on("#ready",()=>{if(!me.conn||!me.conn.open)return;me.conn.send({t:"ready",round:me.round});me.done=true;renderRemote()});
+  const ans=app.querySelector("#ans"), sendBtn=app.querySelector("#send");
+  if(ans){
+    ans.value=me.draft;
+    ans.oninput=()=>{me.draft=ans.value;sendBtn.disabled=!ans.value.trim()};
+    ans.onkeydown=e=>{if(e.key==="Enter"&&ans.value.trim())sendBtn.click()};
+  }
+  if(sendBtn) sendBtn.onclick=()=>{
+    if(!me.conn||!me.conn.open) return;
+    me.conn.send({t:"answer",round:me.round,text:me.draft.trim()}); me.done=true; renderRemote();
+  };
+}
+
 const quitBtn = () => `<button class="btn ghost small" id="quit" style="align-self:center">Afbryd runden</button>`;
 function bindQuit(){const q=app.querySelector("#quit");if(q)q.onclick=()=>{game=null;render()}}
 
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible") return;
+  keepAwake();
+  if(party&&party.peer&&party.peer.disconnected&&!party.peer.destroyed){try{party.peer.reconnect()}catch(e){}}
+  if(party&&!party.peer&&!party.starting) startHosting();
+  if(remote&&remote.status!=="connected"&&!remote.kicked){clearTimeout(remote.retryT);remote.retryT=null;connectRemote()}
+});
+
+const urlCode = new URLSearchParams(location.search).get("party");
+if(urlCode) joinView={code:urlCode.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,4),err:""};
 render();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
