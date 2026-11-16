@@ -1,5 +1,5 @@
 // Gemmer appen, så den virker uden internet. Hæv versionen ved hver ændring.
-const CACHE = "imposter-v3";
+const CACHE = "imposter-v4";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "vendor/peerjs.min.js", "vendor/qrcode.js"];
 
 self.addEventListener("install", e => {

@@ -148,7 +148,13 @@ input[type=text]:focus{outline:2px solid var(--red);outline-offset:1px}
 .link-row{display:flex;gap:8px}
 .link-row input{font-size:.85rem;color:var(--muted)}
 .party-status,.conn-banner{display:flex;align-items:center;gap:10px;color:var(--muted)}
-.conn-banner{background:var(--red-soft);color:var(--ink);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.conn-banner{display:flex;flex-direction:column;align-items:stretch;gap:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:12px 14px;font-size:.95rem}
+.conn-banner.err{background:var(--red-soft);border-color:var(--red)}
+.conn-line{display:flex;gap:10px;align-items:flex-start}
+.conn-banner .btn{align-self:flex-start}
+.warn{width:20px;height:20px;border-radius:50%;background:var(--red);color:var(--red-ink);font-weight:800;display:grid;place-items:center;flex:none;font-size:.8rem}
+.cdetail{color:var(--muted);font-size:.75rem}
+.cdetail:empty{display:none}
 .spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--red);animation:spin .8s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .remotes{display:flex;flex-direction:column;gap:6px}
@@ -476,7 +482,8 @@ function startHosting(){
     party.peer = peer; party.starting = false;
     peer.on("open",()=>{if(party?.peer!==peer)return;party.status="ready";party.tries=0;settings.partyCode=party.code;save();keepAwake();refreshLobby()});
     peer.on("connection",conn=>hostConn(conn));
-    peer.on("disconnected",()=>{setTimeout(()=>{if(party?.peer===peer&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},1500)});
+    peer.on("disconnected",()=>{if(party?.peer===peer&&!game){party.status="connecting";refreshLobby()}
+      setTimeout(()=>{if(party?.peer===peer&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},1500)});
     peer.on("error",err=>{
       if(party?.peer!==peer) return;
       if(err.type==="peer-unavailable") return;
@@ -750,7 +757,7 @@ function renderJoin(){
     if(code.length!==4){joinView.err="Party-koden har 4 tegn. Du finder den på værtens telefon.";return renderJoin()}
     settings.myName=name; save(); joinView=null;
     remote={code,name,status:"connecting",lobby:null,card:null,pub:null,round:null,done:false,revealed:false,draft:""};
-    connectRemote(); render();
+    render(); connectRemote();
   };
   app.querySelector("#join").onclick=go;
   cd.onkeydown=e=>{if(e.key==="Enter")go()};
@@ -759,35 +766,58 @@ function renderJoin(){
 }
 function clearUrl(){try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
+function setStatus(me,status,detail){if(remote!==me)return;me.status=status;if(detail!==undefined)me.detail=detail;renderRemote()}
 function connectRemote(){
   const me=remote; if(!me) return;
+  clearTimeout(me.retryT); me.retryT=null;
+  if(me.status!=="reconnecting") setStatus(me,"server","");
   loadScript(PEER_URL).then(()=>{
     if(remote!==me) return;
-    if(!me.peer||me.peer.destroyed){
-      const peer=new Peer(peerOpts()); me.peer=peer;
-      peer.on("open",()=>{if(remote===me)openConn(me)});
-      peer.on("disconnected",()=>{setTimeout(()=>{if(remote===me&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},1500)});
-      peer.on("error",err=>{
-        if(remote!==me) return;
-        if(err.type==="peer-unavailable"){me.status="notfound"}
-        else {me.status="offline";try{peer.destroy()}catch(e){};me.peer=null}
-        renderRemote(); retryLater(me);
-      });
-    } else if(me.peer.open) openConn(me);
-  }).catch(()=>{if(remote!==me)return;me.status="offline";renderRemote();retryLater(me)});
+    if(me.peer&&!me.peer.destroyed&&me.peer.open) return openConn(me);
+    try{me.peer&&me.peer.destroy()}catch(e){}
+    const peer=new Peer(peerOpts()); me.peer=peer;
+    const openT=setTimeout(()=>{if(remote===me&&me.peer===peer&&!peer.open){try{peer.destroy()}catch(e){};me.peer=null;
+      setStatus(me,"offline","Ingen svar fra forbindelsesserveren efter 12 sek.");retryLater(me,5000)}},12000);
+    peer.on("open",()=>{clearTimeout(openT);if(remote===me&&me.peer===peer)openConn(me)});
+    peer.on("disconnected",()=>{setTimeout(()=>{if(remote===me&&me.peer===peer&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},1500)});
+    peer.on("error",err=>{
+      if(remote!==me||me.peer!==peer) return;
+      clearTimeout(openT);
+      if(err.type==="peer-unavailable"){
+        if(me.conn){try{me.conn.close()}catch(e){};me.conn=null}
+        setStatus(me,"notfound","peer-unavailable"); retryLater(me,4000); return;
+      }
+      try{peer.destroy()}catch(e){}; me.peer=null;
+      setStatus(me,"offline",err.type||String(err)); retryLater(me,5000);
+    });
+  }).catch(()=>{setStatus(me,"offline","Kunne ikke hente party-funktionen");retryLater(me,5000)});
 }
 function openConn(me){
+  if(remote!==me) return;
+  if(me.conn){try{me.conn.close()}catch(e){}}
+  if(me.status!=="reconnecting") setStatus(me,"dialing","");
   const conn=me.peer.connect(peerId(me.code),{reliable:true});
   me.conn=conn;
-  conn.on("open",()=>{if(remote!==me||me.conn!==conn)return;me.status="connected";conn.send({t:"hello",id:settings.clientId,name:me.name});keepAwake();renderRemote()});
+  const start=Date.now();
+  const watch=setInterval(()=>{
+    if(remote!==me||me.conn!==conn||conn.open){clearInterval(watch);return}
+    const pc=conn.peerConnection, ice=pc?pc.iceConnectionState:"–", st=pc?pc.connectionState:"–";
+    const secs=Math.round((Date.now()-start)/1000);
+    if(ice==="failed"||st==="failed"||secs>=25){
+      clearInterval(watch); try{conn.close()}catch(e){}; me.conn=null;
+      setStatus(me,"blocked",`ice=${ice}, forbindelse=${st}, ${secs} sek.`); return;
+    }
+    if(secs>=3&&me.status!=="ice"&&me.status!=="reconnecting") setStatus(me,"ice",`ice=${ice}`);
+    else if(me.status==="ice") {me.detail=`ice=${ice}, ${secs} sek.`; const d=app.querySelector("#cdetail"); if(d) d.textContent=me.detail}
+  },1000);
+  conn.on("open",()=>{if(remote!==me||me.conn!==conn)return;clearInterval(watch);conn.send({t:"hello",id:settings.clientId,name:me.name});keepAwake();setStatus(me,"connected","")});
   conn.on("data",msg=>{if(remote===me&&me.conn===conn)onHostMsg(msg)});
-  conn.on("close",()=>{if(remote===me&&me.conn===conn&&!me.kicked){me.status="reconnecting";me.conn=null;renderRemote();retryLater(me)}});
+  conn.on("close",()=>{if(remote===me&&me.conn===conn&&!me.kicked){clearInterval(watch);me.conn=null;setStatus(me,"reconnecting","");retryLater(me,1500)}});
   conn.on("error",()=>{});
-  setTimeout(()=>{if(remote===me&&me.conn===conn&&!conn.open){try{conn.close()}catch(e){};me.conn=null;if(me.status==="connecting"||me.status==="reconnecting")me.status="notfound";renderRemote();retryLater(me)}},8000);
 }
-function retryLater(me){
+function retryLater(me,ms){
   if(me.retryT||me.kicked) return;
-  me.retryT=setTimeout(()=>{me.retryT=null;if(remote===me&&me.status!=="connected")connectRemote()},3000);
+  me.retryT=setTimeout(()=>{me.retryT=null;if(remote===me&&me.status!=="connected")connectRemote()},ms||3000);
 }
 function onHostMsg(msg){
   if(!msg||typeof msg!=="object") return;
@@ -809,10 +839,20 @@ function leaveParty(){
 let lastRemoteHTML="";
 function renderRemote(){
   const me=remote; if(!me) return;
-  const banner = me.status==="connected" ? "" : `<div class="conn-banner"><span class="spinner" aria-hidden="true"></span>${
-    me.status==="notfound"?`Kan ikke finde party ${esc(me.code)}. Tjek koden, og at værten har appen åben.`:
-    me.status==="offline"?"Ingen internetforbindelse. Prøver igen …":
-    me.status==="reconnecting"?"Forbindelsen blev afbrudt. Genopretter …":"Forbinder …"}</div>`;
+  const MSG = {
+    server:["busy","Forbinder til serveren …"],
+    dialing:["busy",`Leder efter party ${esc(me.code)} …`],
+    ice:["busy","Fandt partyet. Opretter forbindelse til værtens telefon …"],
+    reconnecting:["busy","Forbindelsen blev afbrudt. Genopretter …"],
+    notfound:["err",`Kan ikke finde party ${esc(me.code)}. Tjek at koden er rigtig, og at værten har appen åben med skærmen tændt. Prøver igen automatisk.`],
+    offline:["err","Kan ikke nå forbindelsesserveren. Tjek internettet. Prøver igen automatisk."],
+    blocked:["err","Fandt partyet, men telefonerne kan ikke få forbindelse til hinanden. Det sker tit på mobildata. Prøv at komme på samme Wi-Fi som værten, og tryk Prøv igen."]
+  };
+  const [kind,text] = MSG[me.status]||["busy","Forbinder …"];
+  const banner = me.status==="connected" ? "" : `<div class="conn-banner ${kind}">
+      <div class="conn-line">${kind==="busy"?`<span class="spinner" aria-hidden="true"></span>`:`<span class="warn" aria-hidden="true">!</span>`}<span>${text}</span></div>
+      ${kind==="err"?`<button class="btn ghost small" id="retryConn">Prøv igen</button>`:""}
+      <small class="cdetail" id="cdetail">${esc(me.detail||"")}</small></div>`;
   const header = `<div class="remote-head"><span class="label">Party ${esc(me.code)} · ${esc(me.name)}</span><button class="btn ghost small" id="leave">Forlad</button></div>`;
   let body;
   if(me.kicked){
@@ -857,6 +897,7 @@ function renderRemote(){
   app.innerHTML = html;
   const on=(id,fn)=>{const el=app.querySelector(id);if(el)el.onclick=fn};
   on("#leave",leaveParty); on("#leave2",leaveParty);
+  on("#retryConn",()=>{try{me.peer&&me.peer.destroy()}catch(e){};me.peer=null;me.conn=null;connectRemote()});
   on("#peek",()=>{me.revealed=true;renderRemote()});
   on("#again-card",()=>{me.viewCard=true;renderRemote()});
   on("#hideCard",()=>{me.viewCard=false;renderRemote()});
