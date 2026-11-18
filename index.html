@@ -135,6 +135,9 @@ input[type=text]:focus{outline:2px solid var(--red);outline-offset:1px}
 .ans.imp{border-color:var(--red);background:var(--red-soft)}
 .ans.imp .who-s{color:var(--red)}
 .sub{margin:0;color:var(--muted)}
+.troll{display:flex;flex-direction:column;gap:6px;align-items:center}
+.troll .who{font-family:var(--display);font-weight:800;font-size:2.2rem;color:var(--red);animation:wobble .6s ease-in-out 2}
+@keyframes wobble{25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
 .brand{flex-wrap:wrap}
 .join-btn{margin-left:auto}
 .sub-label{font-size:.8rem;font-weight:700;color:var(--muted);margin-top:4px}
@@ -268,10 +271,65 @@ const SPORGSMAAL = [
   ["Hvor mange minutter bruger du på at gøre dig klar om morgenen?","Hvor mange minutter tager det dig at falde i søvn?"],
   ["Hvad er det bedste program på TV?","Hvad så du altid på TV som barn?"],
   ["Hvilken kage er bedst?","Hvad ville du bage, hvis du var med i Den store bagedyst?"],
-  ["Hvad er den bedste julesang?","Hvilken julesang er du træt af?"]
+  ["Hvad er den bedste julesang?","Hvilken julesang er du træt af?"],
+  ["Hvem i rummet ville klare sig bedst alene på en øde ø?","Hvem i rummet ville give op først på en øde ø?"],
+  ["Hvem i rummet bliver gift først?","Hvem i rummet får børn først?"],
+  ["Hvem i rummet ville være den bedste lærer?","Hvem i rummet ville være den strengeste forælder?"],
+  ["Hvem i rummet har det bedste grin?","Hvem i rummet griner mest af sine egne jokes?"],
+  ["Hvem i rummet ville vinde en quiz?","Hvem i rummet tror oftest, at de har ret?"],
+  ["Hvem i rummet er bedst til at holde på en hemmelighed?","Hvem i rummet sladrer mest?"],
+  ["Hvem i rummet ville klare et politiforhør bedst?","Hvem i rummet er den dårligste løgner?"],
+  ["Hvem i rummet ville overleve længst i en gyserfilm?","Hvem i rummet ville dø først i en gyserfilm?"],
+  ["Hvem i rummet har den bedste stil?","Hvem i rummet bruger længst tid foran spejlet?"],
+  ["Hvem i rummet ville blive en god influencer?","Hvem i rummet poster mest på sociale medier?"],
+  ["Hvem i rummet flytter mest sandsynligt til udlandet?","Hvem i rummet bor i samme by hele livet?"],
+  ["Hvem i rummet ville vinde Vild med dans?","Hvem i rummet danser mest til fester?"],
+  ["Hvem i rummet ville du ringe til klokken 3 om natten?","Hvem i rummet er altid vågen sent?"],
+  ["Hvem i rummet ville være den bedste kok på en lejrtur?","Hvem i rummet ville glemme at pakke det vigtigste?"],
+  ["Hvem i rummet ville være en god politibetjent?","Hvem i rummet ville få flest bøder?"],
+  ["Hvem i rummet ville være den bedste chef?","Hvem i rummet ville blive fyret først?"],
+  ["Hvem i rummet er mest konkurrencemindet?","Hvem i rummet er den dårligste taber?"],
+  ["Hvem i rummet ville bruge en million kroner fornuftigt?","Hvem i rummet ville bruge en million kroner på en uge?"],
+  ["Hvem i rummet ville du helst have som nabo?","Hvem i rummet er sødest?"],
+  ["Hvem i rummet ville være bedst til at passe et barn?","Hvem i rummet er selv mest barnlig?"],
+  ["Hvem i rummet ville blive en god skuespiller?","Hvem i rummet er mest dramatisk?"],
+  ["Hvem i rummet har den bedste humor?","Hvem i rummet ville være den bedste standupkomiker?"],
+  ["Hvem i rummet ville vinde en armlægning?","Hvem i rummet træner mest?"],
+  ["Hvem i rummet bliver mest sandsynligt viral?","Hvem i rummet ville lave noget pinligt på direkte TV?"],
+  ["Hvem i rummet er bedst til at give gode råd?","Hvem i rummet ville være den bedste psykolog?"],
+  ["Hvem i rummet ville prøve bungeejump først?","Hvem i rummet er mest vild?"],
+  ["Hvem i rummet falder mest sandsynligt i søvn til en fest?","Hvem i rummet går først hjem fra en fest?"],
+  ["Hvem i rummet glemmer oftest deres telefon?","Hvem i rummet taber oftest ting?"],
+  ["Hvem i rummet spiser det mærkeligste mad?","Hvem i rummet er mest kræsen?"],
+  ["Hvem i rummet ville klare sig bedst uden internet i en måned?","Hvem i rummet ville gå mest i panik uden telefon?"],
+  ["Hvem i rummet ville du helst tage med på ferie?","Hvem i rummet ville være den bedste rejseguide?"],
+  ["Hvem i rummet ville vinde Paradise Hotel?","Hvem i rummet ville blive sendt først hjem fra Paradise Hotel?"],
+  ["Hvem i rummet ville vinde X Factor?","Hvem i rummet synger mest i bad?"],
+  ["Hvem i rummet ville være bedst som kongelig?","Hvem i rummet ville blive mest forkælet, hvis de blev rige?"],
+  ["Hvem i rummet ville blive en god forfatter?","Hvem i rummet skriver de længste beskeder?"],
+  ["Hvem i rummet bliver først millionær?","Hvem i rummet starter sin egen virksomhed?"],
+  ["Hvem i rummet ville være bedst til at opklare et mord?","Hvem i rummet ville være hovedmistænkt i et mord?"],
+  ["Hvem i rummet ville være den bedste fodboldtræner?","Hvem i rummet råber mest, når de ser sport?"],
+  ["Hvem i rummet har den mest irriterende vane?","Hvem i rummet siger det samme ord alt for tit?"],
+  ["Hvem i rummet har du kendt længst?","Hvem i rummet mødte du senest?"],
+  ["Hvem i rummet ville være bedst til at planlægge en fest?","Hvem i rummet kommer altid sidst til en fest?"],
+  ["Hvem i rummet ville være den mest skræmmende zombie?","Hvem i rummet er mest bange for gyserfilm?"],
+  ["Hvem i rummet ville du bytte liv med i en dag?","Hvem i rummet ville du være på hold med i en overlevelseskonkurrence?"],
+  ["Hvem i rummet ville være den værste statsminister?","Hvem i rummet ville være den mest kaotiske chef?"],
+  ["Hvem i rummet ville overleve længst i Robinson?","Hvem i rummet ville snyde mest i Robinson?"],
+  ["Hvem i rummet ville vinde Den store bagedyst?","Hvem i rummet ville brænde køkkenet ned?"],
+  ["Hvem i rummet er mest tilbøjelig til at blive kendt?","Hvem i rummet ville være en god podcastvært?"],
+  ["Hvad er det pinligste, der er sket for dig i skolen?","Hvad er det sjoveste, der er sket for dig i skolen?"],
+  ["Hvilken kendis var dit første crush?","Hvilken kendis ligner du mest?"],
+  ["Hvad er det mest spontane, du har gjort?","Hvad er det dummeste, du har gjort for sjov?"],
+  ["Hvad ville dine venner sige er din største svaghed?","Hvad er din værste vane?"],
+  ["Hvad var dit kælenavn som barn?","Hvad ville du kalde dit første barn?"],
+  ["Hvad er den mest pinlige sang på din playliste?","Hvilken sang synger du højest med på?"],
+  ["Hvad er den sidste undskyldning, du har brugt for at aflyse noget?","Hvad er den sidste hvide løgn, du har fortalt?"],
+  ["Hvad er det første, folk lægger mærke til ved dig?","Hvad er du mest stolt af ved dig selv?"]
 ];
 
-const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], guests:[], saved:[], imposters:1, off:[], hint:true, mode:"ord", inApp:true,
+const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], guests:[], saved:[], imposters:1, off:[], hint:true, troll:false, mode:"ord", inApp:true,
                   play:"local", hostName:"", myName:"", partyCode:"", clientId:""};
 let settings = load() || structuredClone(DEFAULTS);
 if(!settings.clientId){settings.clientId=Math.random().toString(36).slice(2,12);save()}
@@ -387,6 +445,8 @@ function renderSetup(err){
               <input type="checkbox" class="switch" id="inapp" ${settings.inApp?"checked":""}></label>`
           :`<label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
               <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>`}
+        <label class="toggle" for="troll"><span class="row-text"><b>Troll-runder</b><small>Engang imellem er alle imposters, uden at nogen ved det. Ca. 1 ud af 12 runder.</small></span>
+          <input type="checkbox" class="switch" id="troll" ${settings.troll?"checked":""}></label>
       </div>
     </div>
     ${spg?"":`<div class="section">
@@ -424,6 +484,7 @@ function renderSetup(err){
   app.querySelector("#add").onclick=()=>{L().push("");save();renderSetup();const l=app.querySelector(`#p${L().length-1}`);l&&l.focus()};
   const step=(id,d)=>app.querySelector(id).onclick=()=>{settings.imposters=Math.min(maxImp(totalPlayers()),Math.max(1,settings.imposters+d));save();renderSetup()};
   step("#impMinus",-1); step("#impPlus",1);
+  app.querySelector("#troll").onchange=e=>{settings.troll=e.target.checked;save()};
   const hint=app.querySelector("#hint"); if(hint) hint.onchange=e=>{settings.hint=e.target.checked;save()};
   const inapp=app.querySelector("#inapp"); if(inapp) inapp.onchange=e=>{settings.inApp=e.target.checked;save();renderSetup()};
   app.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{const k=b.dataset.cat;settings.off=settings.off.includes(k)?settings.off.filter(c=>c!==k):[...settings.off,k];save();b.setAttribute("aria-pressed",!settings.off.includes(k))});
@@ -559,9 +620,11 @@ function startGame(){
   }
   if(players.length<3) return renderSetup(isParty()?"I skal være mindst 3 spillere. Vent på at flere tilslutter sig, eller tilføj gæster.":"I skal være mindst 3 spillere.");
   if(new Set(players.map(p=>p.name.toLowerCase())).size!==players.length) return renderSetup("To spillere har samme navn. Giv dem forskellige navne.");
-  const imps = shuffle(players.map((_,i)=>i)).slice(0,Math.min(settings.imposters,maxImp(players.length)));
+  const nImp = Math.min(settings.imposters,maxImp(players.length));
+  const troll = settings.troll && Math.random() < 1/12;
+  const imps = troll ? players.map((_,i)=>i) : shuffle(players.map((_,i)=>i)).slice(0,nImp);
   const local = players.map((p,i)=>p.kind==="remote"?-1:i).filter(i=>i>=0);
-  const base = {id:Date.now().toString(36),party:isParty(),players,imps,local,pos:0,phase:"handoff",starter:pick(players).name,
+  const base = {id:Date.now().toString(36),party:isParty(),players,imps,nImp,troll,local,pos:0,phase:"handoff",starter:pick(players).name,
                 confirmEnd:false,done:players.map(()=>false)};
   if(settings.mode==="spg"){
     const [real,fake] = SPORGSMAAL[+pickFresh(SPORGSMAAL.map((_,i)=>String(i)),"spg")];
@@ -576,7 +639,7 @@ function startGame(){
   render();
 }
 function cardFor(idx){
-  const imp=game.imps.includes(idx), n=game.imps.length;
+  const imp=game.imps.includes(idx), n=game.nImp??game.imps.length;
   if(game.mode==="spg") return {kind:"q",q:imp?game.fake:game.real};
   return imp?{kind:"spy",hint:game.hintOn?game.hint:"",n}:{kind:"word",word:game.word,cat:game.cat,n};
 }
@@ -588,7 +651,7 @@ function pubState(){
     if(game.mode==="spg"){pub.answers=game.answers;pub.qShown=game.qShown||phase==="result";if(pub.qShown)pub.real=game.real}
   }
   if(phase==="result"){
-    pub.imps=game.imps;
+    pub.imps=game.imps; pub.troll=game.troll;
     if(game.mode==="spg") pub.fake=game.fake; else {pub.word=game.word;pub.cat=game.cat}
   }
   return pub;
@@ -717,10 +780,12 @@ function renderAnswers(){
 function resultHTML(mode,names,imps,d){
   const impNames = imps.map(i=>names[i]);
   const reveal = mode==="spg"
-    ? `<div class="card spy q compact"><span class="kicker">${impNames.length>1?"Imposternes":"Imposterens"} spørgsmål</span><span class="secret">${esc(d.fake)}</span></div>
-       <div class="card word q compact"><span class="kicker">Det rigtige spørgsmål</span><span class="secret">${esc(d.real)}</span></div>
+    ? `<div class="card spy q compact"><span class="kicker">${d.troll?"Alles":impNames.length>1?"Imposternes":"Imposterens"} spørgsmål</span><span class="secret">${esc(d.fake)}</span></div>
+       <div class="card word q compact"><span class="kicker">Det rigtige spørgsmål${d.troll?", som ingen fik":""}</span><span class="secret">${esc(d.real)}</span></div>
        ${d.inApp?answersHTML(names,d.answers,imps):""}`
-    : `<div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord</span><span class="secret">${esc(d.word)}</span><span class="note">${esc(d.cat)}</span></div>`;
+    : `<div class="card word" style="min-height:180px"><span class="kicker">Det hemmelige ord${d.troll?", som ingen fik":""}</span><span class="secret">${esc(d.word)}</span><span class="note">${esc(d.cat)}</span></div>`;
+  if(d.troll) return `<div class="troll"><div class="label">Troll-runde</div><div class="who">I blev trollet!</div>
+      <p class="sub">Alle ${names.length} var imposters. Der var ingen at finde.</p></div>${reveal}`;
   return `<div class="label">${impNames.length>1?"Imposterne var":"Imposteren var"}</div>
     <div class="reveal-list">${impNames.map(n=>`<div class="who">${esc(n)}</div>`).join("")}</div>${reveal}`;
 }
