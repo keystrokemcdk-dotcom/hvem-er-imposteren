@@ -357,7 +357,26 @@ const FREAKY = [
   ["Hvor mange gange har du været forelsket?","Hvor mange dates har du været på?"],
   ["Hvad er det mest romantiske, nogen har gjort for dig?","Hvad er det mest romantiske, du har gjort for en anden?"],
   ["Hvad er det mest pinlige, der er sket for dig på en date?","Hvad er det mest pinlige, du har skrevet til et crush?"],
-  ["Hvilken type falder du altid for?","Hvilken type kunne du aldrig date?"]
+  ["Hvilken type falder du altid for?","Hvilken type kunne du aldrig date?"],
+  ["Hvem i rummet har mest erfaring i sengen, tror du?","Hvem i rummet praler mest af sit kærlighedsliv?"],
+  ["Hvem i rummet ville gå i seng med nogen på første date?","Hvem i rummet ville kysse på første date?"],
+  ["Hvem i rummet har haft flest one-night stands, tror du?","Hvem i rummet har været på flest dates?"],
+  ["Hvem i rummet er mest vild i sengen, tror du?","Hvem i rummet er mest vild til fester?"],
+  ["Hvem i rummet har mest sandsynligt sendt et frækt billede?","Hvem i rummet har mest sandsynligt sendt en besked til den forkerte?"],
+  ["Hvem i rummet ville mest sandsynligt have en friends with benefits?","Hvem i rummet ville mest sandsynligt date en ven?"],
+  ["Hvem i rummet ville være bedst til at forføre nogen?","Hvem i rummet er bedst til at få folk til at gøre, hvad de vil?"],
+  ["Hvem i rummet har den frækkeste fantasi, tror du?","Hvem i rummet har den vildeste fantasi?"],
+  ["Hvem i rummet ville mest sandsynligt have sex et offentligt sted?","Hvem i rummet ville mest sandsynligt bade nøgen i havet?"],
+  ["Hvem i rummet bliver hurtigst tændt på nogen?","Hvem i rummet bliver hurtigst forelsket?"],
+  ["Hvem i rummet ville give den mest sexede massage?","Hvem i rummet er mest kilden?"],
+  ["Hvad er det frækkeste, du har gjort?","Hvad er det mest vovede, du har gjort?"],
+  ["Hvor er det mest vovede sted, du har kysset nogen?","Hvor er det mærkeligste sted, du er faldet i søvn?"],
+  ["Hvad er det mest sexede ved en person?","Hvad er det første, du ser på hos en person?"],
+  ["Hvad er en fræk ting, du gerne vil prøve?","Hvad er en vild ting, du vil prøve, før du bliver 30?"],
+  ["Hvor mange har du kysset?","Hvor mange har du haft et crush på?"],
+  ["Hvad er det mest pinlige, der er sket under et hookup?","Hvad er det mest pinlige, der er sket for dig til en fest?"],
+  ["Hvilken kendis ville du gå i seng med?","Hvilken kendis ville du gifte dig med?"],
+  ["Hvilken kropsdel synes du er mest sexet?","Hvilken kropsdel er du mest glad for på dig selv?"]
 ];
 
 const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], guests:[], saved:[], imposters:1, off:[], hint:true, troll:false, freaky:false, mode:"ord", inApp:true,
@@ -476,7 +495,7 @@ function renderSetup(err){
               <input type="checkbox" class="switch" id="inapp" ${settings.inApp?"checked":""}></label>`
           :`<label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
               <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>`}
-        ${spg?`<label class="toggle" for="freaky"><span class="row-text"><b>Freaky spørgsmål</b><small>Blander ${FREAKY.length} flirtende spørgsmål om crushes, dates og kys ind.</small></span>
+        ${spg?`<label class="toggle" for="freaky"><span class="row-text"><b>Freaky spørgsmål</b><small>Blander ${FREAKY.length} frække spørgsmål om crushes, dates og sex ind. Bedst til voksne.</small></span>
           <input type="checkbox" class="switch" id="freaky" ${settings.freaky?"checked":""}></label>`:""}
         <label class="toggle" for="troll"><span class="row-text"><b>Troll-runder</b><small>Engang imellem er alle imposters, uden at nogen ved det. Ca. 1 ud af 12 runder.</small></span>
           <input type="checkbox" class="switch" id="troll" ${settings.troll?"checked":""}></label>
