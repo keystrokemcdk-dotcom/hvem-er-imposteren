@@ -329,7 +329,38 @@ const SPORGSMAAL = [
   ["Hvad er det første, folk lægger mærke til ved dig?","Hvad er du mest stolt af ved dig selv?"]
 ];
 
-const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], guests:[], saved:[], imposters:1, off:[], hint:true, troll:false, mode:"ord", inApp:true,
+const FREAKY = [
+  ["Hvem i rummet er bedst til at flirte?","Hvem i rummet er dårligst til at flirte?"],
+  ["Hvem i rummet ville du helst gå på date med?","Hvem i rummet ville du helst tage med til en koncert?"],
+  ["Hvem i rummet har haft flest kærester?","Hvem i rummet forelsker sig oftest?"],
+  ["Hvem i rummet kysser bedst, tror du?","Hvem i rummet giver de bedste krammere?"],
+  ["Hvem i rummet har mest sandsynligt et hemmeligt crush lige nu?","Hvem i rummet er dårligst til at skjule, at de er forelsket?"],
+  ["Hvem i rummet sender de mest flirtende beskeder?","Hvem i rummet bruger flest emojis i beskeder?"],
+  ["Hvem i rummet scorer først i byen?","Hvem i rummet bliver først fuld i byen?"],
+  ["Hvem i rummet ville være den bedste kæreste?","Hvem i rummet ville være den mest jaloux kæreste?"],
+  ["Hvem i rummet skriver mest sandsynligt til sin eks?","Hvem i rummet ringer mest sandsynligt til nogen, når de er fulde?"],
+  ["Hvem i rummet har det smukkeste smil?","Hvem i rummet har den mest charmerende stemme?"],
+  ["Hvem i rummet har mest sandsynligt en datingapp lige nu?","Hvem i rummet ville gå på blind date først?"],
+  ["Hvem i rummet ville gifte sig i Las Vegas?","Hvem i rummet ville forlove sig efter en måned?"],
+  ["Hvem i rummet kysser mest sandsynligt nogen til en fest?","Hvem i rummet danser tættest til en fest?"],
+  ["Hvem i rummet ville planlægge den mest romantiske date?","Hvem i rummet ville glemme en årsdag?"],
+  ["Hvem i rummet har flest hemmeligheder om sit kærlighedsliv?","Hvem i rummet fortæller mest om sit kærlighedsliv?"],
+  ["Hvem i rummet ville du helst putte med en kold vinteraften?","Hvem i rummet ville du helst se gyserfilm med?"],
+  ["Hvem i rummet bliver oftest ghostet?","Hvem i rummet ghoster oftest andre?"],
+  ["Hvem i rummet dufter bedst?","Hvem i rummet har det flotteste hår?"],
+  ["Hvem i rummet ville være mest populær på Tinder?","Hvem i rummet ville skrive den sjoveste datingprofil?"],
+  ["Hvad er det første, du lægger mærke til ved en, du synes er lækker?","Hvad er din største turn-off?"],
+  ["Hvad er den bedste scorereplik, du kan komme på?","Hvad er den værste scorereplik, du har hørt?"],
+  ["Hvor gammel var du, da du fik dit første kys?","Hvor gammel var du, da du fik din første kæreste?"],
+  ["Hvor er det bedste sted til en første date?","Hvor er det mest pinlige sted, du har været på date?"],
+  ["Hvilken kendis ville du helst gå på date med?","Hvilken kendis har du haft et crush på længst?"],
+  ["Hvor mange gange har du været forelsket?","Hvor mange dates har du været på?"],
+  ["Hvad er det mest romantiske, nogen har gjort for dig?","Hvad er det mest romantiske, du har gjort for en anden?"],
+  ["Hvad er det mest pinlige, der er sket for dig på en date?","Hvad er det mest pinlige, du har skrevet til et crush?"],
+  ["Hvilken type falder du altid for?","Hvilken type kunne du aldrig date?"]
+];
+
+const DEFAULTS = {players:["Anna","Mads","Freja","Oliver"], guests:[], saved:[], imposters:1, off:[], hint:true, troll:false, freaky:false, mode:"ord", inApp:true,
                   play:"local", hostName:"", myName:"", partyCode:"", clientId:""};
 let settings = load() || structuredClone(DEFAULTS);
 if(!settings.clientId){settings.clientId=Math.random().toString(36).slice(2,12);save()}
@@ -445,6 +476,8 @@ function renderSetup(err){
               <input type="checkbox" class="switch" id="inapp" ${settings.inApp?"checked":""}></label>`
           :`<label class="toggle" for="hint"><span class="row-text"><b>Hint til imposteren</b><small>Imposteren får ét stikord</small></span>
               <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>`}
+        ${spg?`<label class="toggle" for="freaky"><span class="row-text"><b>Freaky spørgsmål</b><small>Blander ${FREAKY.length} flirtende spørgsmål om crushes, dates og kys ind.</small></span>
+          <input type="checkbox" class="switch" id="freaky" ${settings.freaky?"checked":""}></label>`:""}
         <label class="toggle" for="troll"><span class="row-text"><b>Troll-runder</b><small>Engang imellem er alle imposters, uden at nogen ved det. Ca. 1 ud af 12 runder.</small></span>
           <input type="checkbox" class="switch" id="troll" ${settings.troll?"checked":""}></label>
       </div>
@@ -484,6 +517,7 @@ function renderSetup(err){
   app.querySelector("#add").onclick=()=>{L().push("");save();renderSetup();const l=app.querySelector(`#p${L().length-1}`);l&&l.focus()};
   const step=(id,d)=>app.querySelector(id).onclick=()=>{settings.imposters=Math.min(maxImp(totalPlayers()),Math.max(1,settings.imposters+d));save();renderSetup()};
   step("#impMinus",-1); step("#impPlus",1);
+  const fr=app.querySelector("#freaky"); if(fr) fr.onchange=e=>{settings.freaky=e.target.checked;save()};
   app.querySelector("#troll").onchange=e=>{settings.troll=e.target.checked;save()};
   const hint=app.querySelector("#hint"); if(hint) hint.onchange=e=>{settings.hint=e.target.checked;save()};
   const inapp=app.querySelector("#inapp"); if(inapp) inapp.onchange=e=>{settings.inApp=e.target.checked;save();renderSetup()};
@@ -627,7 +661,9 @@ function startGame(){
   const base = {id:Date.now().toString(36),party:isParty(),players,imps,nImp,troll,local,pos:0,phase:"handoff",starter:pick(players).name,
                 confirmEnd:false,done:players.map(()=>false)};
   if(settings.mode==="spg"){
-    const [real,fake] = SPORGSMAAL[+pickFresh(SPORGSMAAL.map((_,i)=>String(i)),"spg")];
+    const pool = {s:SPORGSMAAL, f:settings.freaky?FREAKY:[]};
+    const key = pickFresh([...pool.s.map((_,i)=>"s"+i),...pool.f.map((_,i)=>"f"+i)],"spg");
+    const [real,fake] = pool[key[0]][+key.slice(1)];
     game = {...base,mode:"spg",real,fake,inApp:isParty()||settings.inApp,answers:players.map(()=>""),qShown:false};
   } else {
     const cats = Object.keys(KATEGORIER).filter(k=>!settings.off.includes(k));
