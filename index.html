@@ -497,7 +497,7 @@ function renderSetup(err){
               <input type="checkbox" class="switch" id="hint" ${settings.hint?"checked":""}></label>`}
         ${spg?`<label class="toggle" for="freaky"><span class="row-text"><b>Freaky spørgsmål</b><small>Blander ${FREAKY.length} frække spørgsmål om crushes, dates og sex ind. Bedst til voksne.</small></span>
           <input type="checkbox" class="switch" id="freaky" ${settings.freaky?"checked":""}></label>`:""}
-        <label class="toggle" for="troll"><span class="row-text"><b>Troll-runder</b><small>Engang imellem er alle imposters, uden at nogen ved det. Ca. 1 ud af 12 runder.</small></span>
+        <label class="toggle" for="troll"><span class="row-text"><b>Troll-runder</b><small>Engang imellem er alle imposters, uden at nogen ved det. Ca. 1 ud af 8 runder.</small></span>
           <input type="checkbox" class="switch" id="troll" ${settings.troll?"checked":""}></label>
       </div>
     </div>
@@ -674,7 +674,7 @@ function startGame(){
   if(players.length<3) return renderSetup(isParty()?"I skal være mindst 3 spillere. Vent på at flere tilslutter sig, eller tilføj gæster.":"I skal være mindst 3 spillere.");
   if(new Set(players.map(p=>p.name.toLowerCase())).size!==players.length) return renderSetup("To spillere har samme navn. Giv dem forskellige navne.");
   const nImp = Math.min(settings.imposters,maxImp(players.length));
-  const troll = settings.troll && Math.random() < 1/12;
+  const troll = settings.troll && Math.random() < 1/8;
   const imps = troll ? players.map((_,i)=>i) : shuffle(players.map((_,i)=>i)).slice(0,nImp);
   const local = players.map((p,i)=>p.kind==="remote"?-1:i).filter(i=>i>=0);
   const base = {id:Date.now().toString(36),party:isParty(),players,imps,nImp,troll,local,pos:0,phase:"handoff",starter:pick(players).name,
